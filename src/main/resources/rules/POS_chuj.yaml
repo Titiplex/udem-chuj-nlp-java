@@ -1,0 +1,144 @@
+def:
+  pos:
+    [ "ADJ", "ADV", "INTJ", "NOUN", "PROPN", "VERB", "PUNCT", "X", "ADP",
+      "AUX", "CCONJ", "DET", "NUM", "PART", "PRON", "SCONJ" ]
+  feats: # categories only
+    [
+      "Animacy",
+      "Aspect",
+      "Definite",
+      "Degree",
+      "Mood",
+      "Number",
+      "Number[obj]",
+      "Number[subj]",
+      "Number[psor]",
+      "PartType",
+      "Pers[obj]",
+      "Pers[subj]",
+      "Pers[psor]",
+      "Polarity",
+      "PronType",
+      "Reflex",
+      "StatSuf",
+      "SubCat",
+      "Tense",
+      "Typo",
+      "VerbForm",
+      "Voice"
+    ]
+
+constraints:
+  # what POS implies necessary feats
+  # TODO
+  - "(SubCat=Trans & ~(Voice=Pass ∨ Voice=Antip))": "(Number[obj] & Pers[obj])"
+  - "VerbForm=Fin": "Aspect"
+  - "PronType=Art": "Definite"
+
+extractors:
+  agreement_verbs: # name of the extractor recognizes agreement markers
+    tag_schema:
+      series:
+        A:
+          role: "ERG"
+        B:
+          role: "ABS"
+      values:
+        person: [ "1", "2", "3" ] # the persons we try to recognize
+        number:
+          suffix: "PL" # the plural is a suffix, ex : A1PL
+          value_if_present: "Plur"
+          value_if_absent: "Sing"
+    routing: # First rule that match is the one applied
+      # transitive
+      - when: "has(A) & has(B)"
+        set:
+          Pers[subj]: "A.person"
+          Number[subj]: "A.number"
+          Pers[obj]: "B.person"
+          Number[obj]: "B.number"
+          SubCat: "Trans"
+
+      # intransitive
+      - when: "has(B) & !has(A)"
+        set:
+          Pers[subj]: "B.person"
+          Number[subj]: "B.number"
+          SubCat: "Intrans"
+
+      # A alone in verb
+      - when: "has(A) & !has(B)"
+        set:
+          Pers[subj]: "A.person"
+          Number[subj]: "A.number"
+          Pers[obj]: "3"
+          Number[obj]: "Sing"
+          SubCat: "Trans"
+
+gloss_map:
+  pos:
+    - "DIR": "PART"
+    - "PREP": "ADP"
+    - "ADV": "ADV"
+    - "Pro3": "DET"
+    - "CLF": "DET"
+    - "NUM": "NUM"
+    - "APV": "PART"
+    - "DST": "DET"
+    - "SR": "ADP"
+    - "EXIST": "PART"
+    - "ÉNF": "PART"
+    - "COMP": "SCONJ"
+    - "NEX": "SCONJ"
+    - "COND": "SCONJ"
+    - "INTJ": "INTJ"
+  feats:
+    - "PFV": [ "Aspect", "Perf" ]
+    - "IPFV": [ "Aspect", "Imp" ]
+    - "NEG": [ "Polarity", "Neg" ]
+    - "PL": [ "Number", "Plur" ]
+    - "DST": [ "PronType", "Dem" ]
+    - "VI": [ "StatSuf", "Yes" ]
+    - "VT": [ "StatSuf", "Yes" ]
+    - "SEC": [ "Mood", "Seq" ]
+    - "PRSP": [ "Aspect", "Prosp" ]
+    - "PSV": [ "Voice", "Pass" ]
+    - "EA": [ "Voice", "AgFoc" ]
+    - "DIR": [ "PartType", "DIR" ]
+    - "F": [ "PronType", "ART" ]
+    - "F": [ "Definite", "Spec" ]
+
+rules:
+  - name: "punctuation"
+    scope: token
+    match:
+      regex: "^[.!?¡\"¿—]$"
+    set:
+      upos: "PUNCT"
+  - name: "identify verbs"
+    scope: morpheme
+    match:
+      gloss:
+        in_list: "spanish_verbs" # TODO add negation clause
+    set:
+      upos: "VERB"
+  - name: "get verb alignment"
+    scope: token
+    match:
+      gloss:
+        in_list: "spanish_verbs"
+    set:
+      extract:
+        - type: "scan_agreement"
+          extractor: "agreement_verbs"
+          into: "ab"
+
+  - name: "tik is a DET with Dem"
+    scope: token
+    match:
+      in_list: [ "tik" ]
+    set:
+      upos: "DET"
+      feats: {
+        "PronType": "Dem"
+      }

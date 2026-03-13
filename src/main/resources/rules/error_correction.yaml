@@ -1,0 +1,813 @@
+rules:
+  # by default the gloss is normally fused or deleted (nothing changed or modified)
+  - id: 'clean_chars'
+    rewrite:
+      delete:
+        type: 'chars' # does not check glosses as it is a simple char correction
+        chars: [ '[', ']', '_', '=' ]
+  - id: 'clean_null_part'
+    rewrite:
+      delete:
+        type: 'part' #also deletes the gloss
+        chars: [ "ø" ]
+
+  #####################################################
+  # Normalizing glossing
+  #####################################################
+
+  - id: "PRSP"
+    rewrite:
+      match:
+        gloss: [ "FUT", "PROSP" ] # TODO check if gloss can recognize multiple propositions in matching
+      gloss:
+        before: [ "FUT", "PROSP" ]
+        after: "PRSP"
+  - id: "PFV"
+    rewrite:
+      match:
+        gloss: [ "COMP", "CP" ]
+      gloss:
+        before: [ "COMP", "CP" ]
+        after: "PFV"
+  - id: "IPFV"
+    rewrite:
+      match:
+        gloss: [ "HAB", "PRES" ]
+      gloss:
+        before: [ "HAB", "PRES" ]
+        after: "IPFV"
+  - id: "PROX"
+    rewrite:
+      match:
+        gloss: [ "PRX" ]
+      gloss:
+        before: [ "PRX" ]
+        after: "PROX"
+  - id: "CLF"
+    rewrite:
+      match:
+        gloss: [ "CLSF", "Pro3" ]
+      gloss:
+        before: [ "CLSF", "Pro3" ]
+        after: "CLF"
+  - id: "nmlz"
+    rewrite:
+      match:
+        gloss: [ "nmz.t" ]
+      gloss:
+        before: [ "nmz.t" ]
+        after: [ "nmlz" ]
+  - id: "VI"
+    rewrite:
+      match:
+        gloss: [ "INTR" ]
+      gloss:
+        before: [ "INTR" ]
+        after: "VI"
+  - id: "VT"
+    rewrite:
+      match:
+        gloss: [ "TR" ]
+      gloss:
+        before: [ "TR" ]
+        after: "VT"
+  - id: "CLF.NUM"
+    rewrite:
+      match:
+        gloss: [ "CNUM" ]
+      gloss:
+        before: [ "CNUM" ]
+        after: "CLF.NUM"
+  - id: "bueno -> bweno"
+    rewrite:
+      match:
+        gloss: [ "bueno" ]
+      gloss:
+        before: [ "bueno" ]
+        after: "bweno"
+
+  #####################################################
+  # Normalizing case to case glossing
+  #####################################################
+
+  - id: "DEM (+tik) -> PROX"
+    rewrite:
+      match:
+        gloss: "DEM"
+        tokens:
+          isword: [ "tik" ]
+      gloss:
+        before: [ "DEM" ]
+        after: [ "PROX" ]
+  - id: "DEM (+chi') -> DIST"
+    rewrite:
+      match:
+        gloss: "DEM"
+        tokens:
+          isword: [ "chi'" ]
+      gloss:
+        before: [ "DEM" ]
+        after: [ "DIST" ]
+  - id: "NEG (+maj) -> PFV"
+    rewrite:
+      match:
+        gloss: "NEG"
+        tokens:
+          isword: [ "maj" ]
+      gloss:
+        before: [ "NEG" ]
+        after: [ "PFV" ]
+  - id: "NEX (+to) -> COMP"
+    rewrite:
+      match:
+        gloss: "NEX"
+        tokens:
+          isword: [ "to" ]
+      gloss:
+        before: [ "NEX" ]
+        after: [ "COMP" ]
+  - id: "ADV/RCT (+ta') -> DIR.hacia"
+    rewrite:
+      match:
+        gloss: [ "ADV", "RCT" ]
+        tokens:
+          any: [ "ta'", "ta" ]
+      gloss:
+        before: [ "ADV", "RCT" ]
+        after: [ "DIR.hacia" ]
+  - id: "tik tik is an INTJ rather than PRX"
+    rewrite:
+      match:
+        tokens:
+          [ "tik", "tik" ]
+      gloss:
+        before: [ "PROX", "PROX" ]
+        after: [ "INTJ", "INTJ" ]
+  - id: "fuse tik tik"
+    merge:
+      match:
+        tokens:
+          ["tik", "tik"]
+    rewrite:
+      match:
+        tokens:
+          isword: ["tik-tik"]
+        gloss: ["INTJ-INTJ"]
+      before: ["tik-tik"]
+      after: "tiktik"
+      gloss:
+        before:
+          ["INTJ-INTJ"]
+        after: "INTJ"
+
+
+  - id: "PPF/PAS (+-nak-) -> PFV"
+    rewrite:
+      match:
+        tokens:
+          any: [ "nak" ]
+        gloss: [ "PPF", "PAS" ]
+      gloss:
+        before: [ "PPF", "PAS" ]
+        after: "PFV"
+  - id: "TOP/ENF/ÉNF (+ha/a) -> ENF + ha"
+    rewrite:
+      match:
+        tokens:
+          isword:
+            [ "ha", "a" ]
+        gloss: [ "TOP", "ENF", "ÉNF" ]
+      gloss:
+        before: [ "TOP", "ENF", "ÉNF" ]
+        after: "ENF"
+      before: [ "ha", "a" ]
+      after: "ha"
+  - id: "SR (+et') -> SR.con"
+    rewrite:
+      match:
+        tokens:
+          any: [ "et'" ]
+        gloss: [ "SR" ]
+      gloss:
+        before: [ "SR" ]
+        after: [ "SR.con" ]
+  - id: "SR (+yik) -> SR.para + ik"
+    rewrite:
+      match:
+        tokens:
+          any: [ "yik" ]
+        gloss: [ "SR" ]
+      gloss:
+        before: [ "SR" ]
+        after: "SR.para"
+      before: [ "yik" ]
+      after: "ik"
+  - id: "SR (+uj) -> SR.por"
+    rewrite:
+      match:
+        tokens:
+          any: [ "uj" ]
+        gloss: [ "SR" ]
+      gloss:
+        before: [ "SR" ]
+        after: [ "SR.por" ]
+  - id: "CLF.NUM (+wan) -> CLF.NUM.ANIM (+wanh)"
+    rewrite:
+      match:
+        tokens:
+          any: [ "wan" ]
+        gloss: [ "CLF.NUM" ]
+      gloss:
+        before: [ "CLF.NUM" ]
+        after: "CLF.NUM.ANIM"
+      before: [ "wan" ]
+      after: "wanh"
+  - id: "CLF.NUM (+e') -> CLF.NUM.INAN"
+    rewrite:
+      match:
+        tokens:
+          any: [ "e'" ]
+        gloss: [ "CLF.NUM" ]
+      gloss:
+        before: [ "CLF.NUM" ]
+        after: "CLF.NUM.INAN"
+  - id: "CLF (+winh) -> CLF.M"
+    rewrite:
+      match:
+        tokens:
+          any: [ "winh" ]
+        gloss: [ "CLF" ]
+      gloss:
+        before: [ "CLF" ]
+        after: "CLF.M"
+  - id: "DIR/DIR.acá (+kot) -> DIR.hacia.acá"
+    rewrite:
+      match:
+        tokens:
+          any: [ "kot" ]
+        gloss: [ "DIR", "DIR.acá" ]
+      gloss:
+        before: [ "DIR", "DIR.acá" ]
+        after: "DIR.hacia.acá"
+  - id: "CLF (+ix) -> CLF.F"
+    rewrite:
+      match:
+        tokens:
+          any: [ "ix" ]
+        gloss: [ "CLF" ]
+      gloss:
+        before: [ "CLF" ]
+        after: "CLF.F"
+  - id: "first rewrite no' -> nok' if isword"
+    rewrite:
+      match:
+        tokens:
+          isword: [ "no'" ]
+      before: [ "no'" ]
+      after: "nok'"
+  - id: "CLF (+nok') -> CLF.animal"
+    rewrite:
+      match:
+        tokens:
+          any: [ "nok'" ]
+        gloss: [ "CLF" ]
+      gloss:
+        before: [ "CLF" ]
+        after: "CLF.animal"
+  - id: "CLF (+te(')) -> CLF.madera (+te')"
+    rewrite:
+      match:
+        tokens:
+          any: [ "te'", "te" ]
+        gloss: [ "CLF" ]
+      before: [ "te", "te'" ]
+      after: "te'"
+      gloss:
+        before: [ "CLF" ]
+        after: "CLF.madera"
+
+  # for the  next rule we must first insert an h
+  - id: "'add h in beginning of eb'"
+    rewrite:
+      before: [ "eb'" ]
+      after: "heb'"
+  - id: "PL (+heb') -> PL.HUM"
+    rewrite:
+      match:
+        tokens:
+          any: [ "heb'" ]
+        gloss: [ "PL" ]
+      gloss:
+        before: [ "PL" ]
+        after: "PL.hum"
+  - id: "PVPF/PSV/PPT (+b'il') -> PAS.PFV"
+    rewrite:
+      match:
+        tokens:
+          any: [ "b'il" ]
+        gloss: [ "PVPF", "PSV", "PPT" ]
+      gloss:
+        before: [ "PVPF", "PSV", "PPT" ]
+        after: "PAS.PFV"
+  - id: "chuj w glosses" # what a mess wtf
+    rewrite:
+      match:
+        gloss: [ "AP.INC", "VBLZ", "LEX", "LEXC", "W", "WI", "INC" ]
+        tokens:
+          any: [ "w" ]
+      gloss:
+        before: [ "AP.INC", "VBLZ", "LEX", "LEXC", "W", "WI", "INC" ]
+        after: "INERG"
+  - id: "wi -> w-i + INERG-VI"
+    rewrite:
+      match:
+        tokens:
+          any: [ "wi" ]
+      before:
+        [ "wi" ]
+      after: "w-i"
+      gloss:
+        before: [ "_" ]
+        after: "INERG-VI"
+  - id: "MODF (+xo) -> de.nuevo"
+    rewrite:
+      match:
+        gloss: [ "MODF" ]
+        tokens:
+          any: [ "xo" ]
+      gloss:
+        before: [ "MODF" ]
+        after: "de.nuevo"
+
+  # small pause : jun case
+
+  - id: "INDF + jun -> uno"
+    rewrite:
+      match:
+        gloss: [ "INDF" ]
+        tokens:
+          isword: [ "jun" ]
+      gloss:
+        before: [ "INDF" ]
+        after: "uno"
+  - id: "pues (+jun) -> INTJ"
+    rewrite:
+      match:
+        gloss: [ "pues" ]
+        tokens:
+          any: [ "jun" ]
+      gloss:
+        before: [ "pues" ]
+        after: "INTJ"
+  - id: "merge jun-tzan(h) into juntzanh"
+    rewrite:
+      match:
+        tokens:
+          isword: [ "jun-tzan", "jun-tzanh" ]
+      before: [ "jun-tzan", "jun-tzanh" ]
+      after: "juntzanh"
+      gloss:
+        before: [ "INDF-PL", "uno-PL" ]
+        after: "algunos" # TODO verify if gloss is indeed changed and we do not endup with a supplementary one
+
+  # jun case ended
+
+  - id: "Cmaíz/CLF (+ixim) -> CLF.grano"
+    rewrite:
+      match:
+        gloss: [ "Cmaíz", "CLF" ]
+        tokens:
+          isword: [ "ixim" ]
+      gloss:
+        before: [ "Cmaíz", "CLF" ]
+        after: "CLF.grano"
+  - id: "SR + ib'an(h) -> SR.sobre + ib'anh"
+    rewrite:
+      match:
+        gloss:
+          [ "SR" ]
+        tokens:
+          has_segment: [ "ib'an", "ib'anh" ]
+      gloss:
+        before: [ "SR" ]
+        after: [ "SR.sobre" ]
+      before: [ "ib'an", "ib'anh" ]
+      after: "ib'anh"
+  - id: "malaj has neg.exist"
+    rewrite:
+      match:
+        gloss:
+          [ "NEG" ]
+        tokens:
+          isword: [ "malaj" ]
+      gloss:
+        before: [ "NEG" ]
+        after: "NEG.EXIST"
+  - id: "wal is an INTJ"
+    rewrite:
+      match:
+        gloss:
+          [ "ENF" ]
+        tokens:
+          isword: [ "wal" ]
+      gloss:
+        before: [ "ENF" ]
+        after: "INTJ"
+  - id: "chuklaj is malo rather than feo"
+    rewrite:
+      match:
+        gloss: [ "feo" ]
+        tokens:
+          isword: [ "chuklaj" ]
+      gloss:
+        before: [ "feo" ]
+        after: "malo"
+  - id: "modif k'en clf"
+    rewrite:
+      match:
+        gloss: [ "CLF" ]
+        tokens:
+          isword: [ "k'en" ]
+      gloss:
+        before: [ "CLF" ]
+        after: [ "CLF.piedra" ]
+  - id: "(')aj + exist(ir) -> estar"
+    rewrite:
+      match:
+        gloss: [ "exist", "existir" ]
+        tokens:
+          any: [ "'aj", "aj" ]
+      gloss:
+        before: [ "exist", "existir" ]
+        after: "estar"
+
+
+  #####################################################
+  # Pronouns
+  #####################################################
+
+  # we first need to fix the mix of hin and in + b1
+  - id: "fixing in / hin + B1"
+    rewrite:
+      match:
+        tokens:
+          any: [ "hin" ]
+        gloss: [ "B1" ]
+      before: [ "hin" ]
+      after: "in"
+  - id: 'normalize_pronouns'
+    rewrite: # lets first normalize the a/ha part into ha'
+      match: # a match is only on the chuj line, between two words
+        tokens:
+          - [ 'a', 'tik' ]
+          - [ 'ha', 'tik' ]
+      between:
+        length: 1
+      before: [ 'a', 'ha' ] # can only replace words and not morphemes
+      after: "ha'"
+  - id: "merge pronouns"
+    merge:
+      match:
+        tokens:
+          - [ "ha'", 'in' ]
+          - [ "ha'", 'ach' ]
+          - [ "ha'", 'onh' ]
+          - [ "ha'", 'ex' ]
+  - id: "writingn in into hin ONLY if the word startswith in"
+    rewrite:
+      match:
+        gloss: [ "B1" ]
+        tokens:
+          startswith: [ "in" ]
+      insert:
+        segment: "h"
+        token: 1 # initial position among the dash separated tokens in a lexeme
+        position: 1 # initial position
+
+  #####################################################
+  # Complex rewriting
+  #####################################################
+
+  - id: "ma-x" # TODO verify if viable
+    rewrite:
+      match:
+        gloss:
+          [ "NEG-IPFV" ]
+        tokens:
+          isword: [ "ma-x" ]
+      before: [ "ma-x" ]
+      after: "max"
+      gloss:
+        before: [ "NEG-IPFV" ]
+        after: [ "NEG.IPFV" ]
+  - id: "ma-j"
+    rewrite:
+      match:
+        gloss:
+          [ "NEG-PFV" ]
+        tokens:
+          isword: [ "ma-j" ]
+      before: [ "ma-j" ]
+      after: "maj"
+      gloss:
+        before: [ "NEG-PFV" ]
+        after: [ "NEG.PFV" ]
+  - id: "-to- has gloss rewritten to todavia and is merged if lemma" # TODO check if takes morphemes too
+    rewrite:
+      match:
+        gloss: [ "MODF", "ADV" ]
+        tokens:
+          any: [ "to" ]
+      gloss:
+        before: [ "MODF", "ADV" ]
+        after: "todavia"
+    merge:
+      match:
+        gloss: [ "todavia" ]
+        tokens: [ "_", "to" ]
+  - id: "split jax when x is not a different morpheme"
+    rewrite:
+      match:
+        gloss: [ "regresar" ]
+        tokens:
+          isword: [ "jax" ]
+      gloss:
+        before: [ "regresar" ]
+        after: "venir-de.nuevo"
+
+  #####################################################
+  # Add h or '
+  #####################################################
+
+  - id: 'add h in beginning of adjectives'
+    rewrite:
+      match:
+        gloss: # must be in regex form, checks every gloss in a token, between dashes
+          starts_with: [ "A1", "A2", "A3", "B1", "B2", "B3" ]
+        tokens:
+          startswith_vowel: true  # if token starts with vowel
+      insert:
+        segment: "h"
+        token: 1 # initial position among the dash separated tokens in a lexeme
+        position: 1 # initial position
+  - id: "add ' in ixaji"
+    rewrite:
+      before: [ "ixaji" ]
+      after: "ix'aji"
+  - id: "axo to haxo with CONJ"
+    rewrite:
+      match:
+        tokens:
+          isword: [ "axo" ]
+        gloss:
+          "CONJ"
+      before: [ "axo" ]
+      after: "haxo"
+  - id: "rewrite b'o"
+    rewrite:
+      match:
+        gloss: "spanish_verb"
+        tokens:
+          isword: [ "b'o" ] # be careful to write with dashes if there are, otherwise, it will not be recognized.
+      before: [ "b'o" ]
+      after: "b'o'"
+  - id: 'rewrite tz-aj'
+    rewrite:
+      match: # TODO et gloss b3 ?
+        tokens:
+          isword: [ "tz-aj" ]
+      before: [ "tz-aj" ]
+      after: "tz'-aj"
+  - id: "take out apotrophe in mach-ek'-el"
+    rewrite:
+      match:
+        tokens:
+          isword: [ "mach-ek'-el" ]
+      before: [ "mach-ek'-el" ]
+      after: "mach-ek-el"
+  - id: "rewrite b'ian"
+    rewrite:
+      match:
+        tokens:
+          isword: [ "b'ian" ]
+      before: [ "b'ian" ]
+      after: "b'i'an"
+  # o a u + VT -> o' a' u'
+  - id: "o'"
+    rewrite:
+      match:
+        tokens:
+          any: [ "o" ]
+        gloss: [ "VT" ]
+      before: [ "o" ]
+      after: "o'"
+  - id: "a'"
+    rewrite:
+      match:
+        tokens:
+          any: [ "a" ]
+        gloss: [ "VT" ]
+      before: [ "a" ]
+      after: "a'"
+  - id: "u'"
+    rewrite:
+      match:
+        tokens:
+          any: [ "u" ]
+        gloss: [ "VT" ]
+      before: [ "u" ]
+      after: "u'"
+  - id: "man into manh if word + NEG"
+    rewrite:
+      match:
+        gloss: [ "NEG" ]
+        tokens:
+          isword:
+            [ "man" ]
+      before: [ "man" ]
+      after: [ "manh" ]
+
+  #####################################################
+  # Merges
+  #####################################################
+
+  - id: "merge _ xo"
+    merge:
+      match:
+        tokens: [ "_", "xo" ] # _ means any previous word here
+  - id: "merge _ laj"
+    merge:
+      match:
+        tokens: [ "_", "laj" ]
+  - id: "merge x-ok and b'o'"
+    merge:
+      match:
+        tokens: [ "b'o'", "x-ok" ]
+  - id: "merge et' and b'ey-um"
+    merge:
+      match:
+        tokens: [ "et'", "b'ey-um" ]
+  - id: "merge tzak to following lemma"
+    merge:
+      match:
+        tokens: [ "tzak", "_" ]
+  - id: "merge t'ay in/och/onh/ex"
+    merge:
+      match:
+        tokens:
+          - [ "t'ay", "in" ]
+          - [ "t'ay", "och" ]
+          - [ "t'ay", "onh" ]
+          - [ "t'ay", "ex" ]
+  - id: "merge (h)a to and not conserve morphemic bounds"
+    rewrite:
+      match:
+        tokens:
+          - [ "ha", "to" ]
+          - [ "a", "to" ]
+      before: [ "a", "ha" ]
+      after: [ "ha" ]
+    merge:
+      match:
+        tokens:
+          - [ "ha", "to" ]
+  - id: "merge tas + am"
+    merge:
+      match:
+        tokens:
+          - [ "tas", "am" ]
+    rewrite:
+      match:
+        tokens:
+          isword: [ "tas-am" ]
+      gloss:
+        before: [ "_" ] # Todo check if good
+        after: "qué-DUB"
+  - id: "merge xschi' and winh"
+    merge:
+      match:
+        tokens:
+          - [ "xschi'", "winh" ]
+  - id: "olin + b'at"
+    merge:
+      match:
+        tokens:
+          - [ "olin", "b'at" ]
+  - id: "ixonh + b'at"
+    merge:
+      match:
+        tokens:
+          - [ "ixonh", "b'at" ]
+  - id: "olex + b'at"
+    merge:
+      match:
+        tokens:
+          - [ "olex", "b'at" ]
+  - id: "tzin + b'at"
+    merge:
+      match:
+        tokens:
+          - [ "tzin", "b'at" ]
+
+  #####################################################
+  # Misc
+  #####################################################
+  - id: 'split directionals'
+    rewrite:
+      match:
+        gloss: "spanish_verb" # special option for checking spanish verbs, to identify matching Chuj verb.
+        tokens:
+          endswith: [ 'el', 'kot', "k'och", 'kan', 'och', 'ek', 'em', "k'e'", "b'at", 'hul', 'ul', "ta'" ]
+      split: # used to split a verb
+        type: "end" # where to split
+        tokens: # what to split
+          [ 'el', 'kot', "k'och", 'kan', 'och', 'ek', 'em', "k'e'", "b'at", 'hul', 'ul', "ta'" ] # TODO sauf si racine verbale, à checker
+  - id: "clean ul/hul"
+    rewrite:
+      match:
+        tokens:
+          isword: [ "ul", "hul" ]
+        gloss: [ "DIR", "DIR.acá" ]
+      before: [ "ul", "hul" ]
+      after: "hul"
+      gloss:
+        before: [ "DIR", "DIR.acá" ]
+        after: "DIR.acá"
+  - id: "ix -> ix' if vowel-initial verb root"
+    rewrite:
+      match:
+        tokens: [ "ix", "_" ]
+        chuj:
+          side: "j"
+          root_from_gloss: "spanish_verb"
+          root_startswith_vowel: true
+      targets: "i"
+      before: [ "ix" ]
+      after: "ix'"
+
+  - id: "normalize iiii* -> hi"
+    rewrite:
+      regex_sub:
+        scope: "chuj"
+        pattern: "^i+$" # TODO correct that
+        repl: "hi"
+  - id: "ha-to into hato + hasta"
+    rewrite:
+      match:
+        tokens:
+          isword: [ "ha-to" ]
+      before: [ "ha-to" ]
+      after: "hato"
+      gloss:
+        before: [ "_" ]
+        after: "hasta"
+  - id: "lanh into lan if isword"
+    rewrite:
+      match:
+        tokens:
+          isword: [ "lanh" ]
+      before:
+        [ "lanh" ]
+      after: "lan"
+  - id: "-an-(#) + EA -> -an-(#) + FA"
+    rewrite:
+      match:
+        tokens:
+          has_segment: "an"
+        gloss: [ "EA" ]
+      gloss:
+        before: [ "EA" ]
+        after: "FA"
+
+
+  # END OF THE DOC
+
+  # "add SG to B1, A1, B2, A2"
+  - id: "A1"
+    rewrite:
+      match:
+        gloss: [ "A1" ]
+      gloss:
+        before: [ "A1" ]
+        after: "A1SG"
+  - id: "B1"
+    rewrite:
+      match:
+        gloss: [ "B1" ]
+      gloss:
+        before: [ "B1" ]
+        after: "B1SG"
+  - id: "A2"
+    rewrite:
+      match:
+        gloss: [ "A2" ]
+      gloss:
+        before: [ "A2" ]
+        after: "A2SG"
+  - id: "B2"
+    rewrite:
+      match:
+        gloss: [ "B2" ]
+      gloss:
+        before: [ "B2" ]
+        after: "B2SG"
