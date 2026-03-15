@@ -8,12 +8,15 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public final class AnnotationConfigLoader {
+
     @SuppressWarnings("unchecked")
     public AnnotationConfig load(InputStream inputStream) {
         AnnotationConfig config = new AnnotationConfig();
         Yaml yaml = new Yaml();
         Map<String, Object> data = yaml.load(inputStream);
-        if (data == null) return config;
+        if (data == null) {
+            return config;
+        }
 
         Map<String, Object> glossMap = RuleYamlSupport.map(data.get("gloss_map"));
         for (Map<String, Object> pos : RuleYamlSupport.mapList(glossMap.get("pos"))) {
@@ -40,29 +43,54 @@ public final class AnnotationConfigLoader {
         List<Map<String, Object>> rules = (List<Map<String, Object>>) data.getOrDefault("rules", List.of());
         for (Map<String, Object> rawRule : rules) {
             Map<String, Object> match = RuleYamlSupport.map(rawRule.get("match"));
-            boolean onGloss = match.containsKey("gloss");
+            String scope = RuleYamlSupport.string(rawRule.get("scope"), "token");
+
+            boolean onGloss = false;
             String glossSpecial = null;
-            Map<String, Object> effective = onGloss ? RuleYamlSupport.map(match.get("gloss")) : match;
-            Object glossObj = match.get("gloss");
-            if (glossObj instanceof Map<?, ?> gm) effective = (Map<String, Object>) gm;
-            if (glossObj instanceof String gs && "spanish_verbs".equalsIgnoreCase(gs)) {
-                glossSpecial = gs;
-                effective = Map.of();
+            Pattern regex = null;
+            Set<String> inList = new LinkedHashSet<>();
+
+            if (match.containsKey("gloss")) {
                 onGloss = true;
+                Object glossObj = match.get("gloss");
+                if (glossObj instanceof String gs && "spanish_verbs".equalsIgnoreCase(gs)) {
+                    glossSpecial = gs;
+                } else {
+                    Map<String, Object> glossMapMatch = RuleYamlSupport.map(glossObj);
+                    if (!glossMapMatch.isEmpty()) {
+                        inList.addAll(normalizeStringList(glossMapMatch.get("in_list")));
+                        String regexText = RuleYamlSupport.string(glossMapMatch.get("regex"), "");
+                        if (!regexText.isBlank()) {
+                            regex = Pattern.compile(regexText);
+                        }
+                        if (inList.contains("spanish_verbs")) {
+                            inList.remove("spanish_verbs");
+                            glossSpecial = "spanish_verbs";
+                        }
+                    } else {
+                        inList.addAll(normalizeStringList(glossObj));
+                    }
+                }
+            } else {
+                inList.addAll(normalizeStringList(match.get("in_list")));
+                String regexText = RuleYamlSupport.string(match.get("regex"), "");
+                if (!regexText.isBlank()) {
+                    regex = Pattern.compile(regexText);
+                }
             }
-            String regexText = RuleYamlSupport.string(effective.get("regex"), "");
-            Pattern regex = regexText.isBlank() ? null : Pattern.compile(regexText);
-            Set<String> inList = new LinkedHashSet<>(RuleYamlSupport.stringList(effective.get("in_list")));
-            if (glossObj instanceof List<?>) inList.addAll(RuleYamlSupport.stringList(glossObj));
+
             Map<String, Object> set = RuleYamlSupport.map(rawRule.get("set"));
             List<Map<String, String>> extractsList = new ArrayList<>();
             Object extractObj = set.get("extract");
             if (extractObj instanceof List<?> l) {
-                for (Object o : l) extractsList.add(castStringMap(RuleYamlSupport.map(o)));
+                for (Object o : l) {
+                    extractsList.add(castStringMap(RuleYamlSupport.map(o)));
+                }
             }
+
             config.rules().add(new AnnotationRule(
                     RuleYamlSupport.string(rawRule.get("name"), ""),
-                    RuleYamlSupport.string(rawRule.get("scope"), "token"),
+                    scope,
                     regex,
                     inList,
                     onGloss,
@@ -72,7 +100,21 @@ public final class AnnotationConfigLoader {
                     extractsList
             ));
         }
+
         return config;
+    }
+
+    private static Set<String> normalizeStringList(Object raw) {
+        Set<String> out = new LinkedHashSet<>();
+        if (raw == null) {
+            return out;
+        }
+        if (raw instanceof String s) {
+            out.add(s);
+            return out;
+        }
+        out.addAll(RuleYamlSupport.stringList(raw));
+        return out;
     }
 
     private Map<String, String> castStringMap(Map<String, Object> raw) {

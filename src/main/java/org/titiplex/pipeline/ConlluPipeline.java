@@ -30,7 +30,18 @@ public final class ConlluPipeline {
         ConlluEntry entry = toEntry(block);
         List<ConlluToken> out = new ArrayList<>();
         for (var line : entry.lines()) {
-            out.add(new ConlluToken(line.id(), line.form(), line.lemma(), line.upos(), line.xpos(), Map.copyOf(line.feats()), line.head(), line.deprel(), line.deps(), line.misc()));
+            out.add(new ConlluToken(
+                    line.id(),
+                    line.form(),
+                    line.lemma(),
+                    line.upos(),
+                    line.xpos(),
+                    Map.copyOf(line.feats()),
+                    line.head(),
+                    line.deprel(),
+                    line.deps(),
+                    line.misc()
+            ));
         }
         return new ConlluSentence(Integer.toString(block.id()), block.chujText(), out);
     }

@@ -1,0 +1,234 @@
+rules:
+  - id: clean_chars
+    rewrite:
+      delete:
+        type: chars
+        chars: ["[", "]", "_", "="]
+
+  - id: clean_null_part
+    rewrite:
+      delete:
+        type: part
+        chars: ["ø"]
+
+  - id: normalize_prsp
+    rewrite:
+      match:
+        gloss: ["FUT", "PROSP"]
+      gloss:
+        before: ["FUT", "PROSP"]
+        after: "PRSP"
+
+  - id: normalize_pfv
+    rewrite:
+      match:
+        gloss: ["COMP", "CP"]
+      gloss:
+        before: ["COMP", "CP"]
+        after: "PFV"
+
+  - id: normalize_ipfv
+    rewrite:
+      match:
+        gloss: ["HAB", "PRES"]
+      gloss:
+        before: ["HAB", "PRES"]
+        after: "IPFV"
+
+  - id: normalize_prox
+    rewrite:
+      match:
+        gloss: ["PRX"]
+      gloss:
+        before: ["PRX"]
+        after: "PROX"
+
+  - id: normalize_clf
+    rewrite:
+      match:
+        gloss: ["CLSF", "Pro3"]
+      gloss:
+        before: ["CLSF", "Pro3"]
+        after: "CLF"
+
+  - id: normalize_nmlz
+    rewrite:
+      match:
+        gloss: ["nmz.t"]
+      gloss:
+        before: ["nmz.t"]
+        after: ["nmlz"]
+
+  - id: normalize_vi
+    rewrite:
+      match:
+        gloss: ["INTR"]
+      gloss:
+        before: ["INTR"]
+        after: "VI"
+
+  - id: normalize_vt
+    rewrite:
+      match:
+        gloss: ["TR"]
+      gloss:
+        before: ["TR"]
+        after: "VT"
+
+  - id: normalize_clf_num
+    rewrite:
+      match:
+        gloss: ["CNUM"]
+      gloss:
+        before: ["CNUM"]
+        after: "CLF.NUM"
+
+  - id: bueno_to_bweno
+    rewrite:
+      match:
+        gloss: ["bueno"]
+      gloss:
+        before: ["bueno"]
+        after: "bweno"
+
+  - id: dem_tik_to_prox
+    rewrite:
+      match:
+        gloss: "DEM"
+        tokens:
+          isword: ["tik"]
+      gloss:
+        before: ["DEM"]
+        after: ["PROX"]
+
+  - id: dem_chi_to_dist
+    rewrite:
+      match:
+        gloss: "DEM"
+        tokens:
+          isword: ["chi'"]
+      gloss:
+        before: ["DEM"]
+        after: ["DIST"]
+
+  - id: neg_maj_to_pfv
+    rewrite:
+      match:
+        gloss: "NEG"
+        tokens:
+          isword: ["maj"]
+      gloss:
+        before: ["NEG"]
+        after: ["PFV"]
+
+  - id: nex_to_comp_on_to
+    rewrite:
+      match:
+        gloss: "NEX"
+        tokens:
+          isword: ["to"]
+      gloss:
+        before: ["NEX"]
+        after: ["COMP"]
+
+  - id: adv_rct_ta_to_dir
+    rewrite:
+      match:
+        gloss: ["ADV", "RCT"]
+        tokens:
+          any: ["ta'", "ta"]
+      gloss:
+        before: ["ADV", "RCT"]
+        after: ["DIR.hacia"]
+
+  - id: tik_tik_to_intj
+    rewrite:
+      match:
+        tokens:
+          - ["tik", "tik"]
+      gloss:
+        before: ["PROX", "PROX"]
+        after: ["INTJ", "INTJ"]
+
+  - id: fuse_tik_tik
+    merge:
+      match:
+        tokens:
+          - ["tik", "tik"]
+
+  - id: normalize_tik_tik_surface
+    rewrite:
+      match:
+        tokens:
+          isword: ["tik-tik"]
+      before: ["tik-tik"]
+      after: "tiktik"
+      gloss:
+        before: ["INTJ-INTJ"]
+        after: "INTJ"
+
+  - id: b1_in_to_hin
+    rewrite:
+      match:
+        gloss: ["B1"]
+        tokens:
+          startswith: ["in"]
+      insert:
+        segment: "h"
+        token: 1
+        position: 1
+
+  - id: add_h_on_vowel_initial_prefixes
+    rewrite:
+      match:
+        gloss:
+          starts_with: ["A1", "A2", "A3", "B1", "B2", "B3"]
+        tokens:
+          startswith_vowel: true
+      insert:
+        segment: "h"
+        token: 1
+        position: 1
+
+  - id: rewrite_bo_spanish_verb
+    rewrite:
+      match:
+        gloss: spanish_verb
+        tokens:
+          isword: ["b'o"]
+      before: ["b'o"]
+      after: "b'o'"
+
+  - id: merge_any_xo
+    merge:
+      match:
+        tokens: ["_", "xo"]
+
+  - id: split_directionals
+    rewrite:
+      match:
+        gloss: spanish_verb
+        tokens:
+          endswith: ["el", "kot", "k'och", "kan", "och", "ek", "em", "k'e'", "b'at", "hul", "ul", "ta'"]
+      split:
+        type: end
+        tokens: ["el", "kot", "k'och", "kan", "och", "ek", "em", "k'e'", "b'at", "hul", "ul", "ta'"]
+
+  - id: ix_to_ix_apostrophe_before_vowel_initial_verb
+    rewrite:
+      match:
+        tokens: ["ix", "_"]
+        chuj:
+          side: "j"
+          root_from_gloss: "spanish_verb"
+          root_startswith_vowel: true
+      targets: "i"
+      before: ["ix"]
+      after: "ix'"
+
+  - id: normalize_i_to_hi
+    rewrite:
+      regex_sub:
+        scope: chuj
+        pattern: "^i+$"
+        repl: "hi"

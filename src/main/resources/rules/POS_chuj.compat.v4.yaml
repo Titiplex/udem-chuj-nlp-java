@@ -1,0 +1,76 @@
+def:
+  pos: ["ADJ", "ADV", "INTJ", "NOUN", "PROPN", "VERB", "PUNCT", "X", "ADP", "AUX", "CCONJ", "DET", "NUM", "PART", "PRON", "SCONJ"]
+  feats: ["Animacy", "Aspect", "Definite", "Degree", "Mood", "Number", "Number[obj]", "Number[subj]", "Number[psor]", "PartType", "Pers[obj]", "Pers[subj]", "Pers[psor]", "Polarity", "PronType", "Reflex", "StatSuf", "SubCat", "Tense", "Typo", "VerbForm", "Voice"]
+
+extractors:
+  agreement_verbs:
+    kind: agreement
+
+gloss_map:
+  pos:
+    - DIR: PART
+    - PREP: ADP
+    - ADV: ADV
+    - Pro3: DET
+    - CLF: DET
+    - NUM: NUM
+    - APV: PART
+    - DST: DET
+    - SR: ADP
+    - EXIST: PART
+    - ÉNF: PART
+    - COMP: SCONJ
+    - NEX: SCONJ
+    - COND: SCONJ
+    - INTJ: INTJ
+  feats:
+    - PFV: [Aspect, Perf]
+    - IPFV: [Aspect, Imp]
+    - NEG: [Polarity, Neg]
+    - PL: [Number, Plur]
+    - DST: [PronType, Dem]
+    - VI: [StatSuf, Yes]
+    - VT: [StatSuf, Yes]
+    - SEC: [Mood, Seq]
+    - PRSP: [Aspect, Prosp]
+    - PSV: [Voice, Pass]
+    - EA: [Voice, AgFoc]
+    - DIR: [PartType, DIR]
+    - F: [PronType, Art]
+    - F.DEF: [Definite, Spec]
+
+rules:
+  - name: punctuation
+    scope: token
+    match:
+      regex: '^[.!?¡"¿—]$'
+    set:
+      upos: PUNCT
+
+  - name: identify_verbs_from_spanish_gloss
+    scope: morpheme
+    match:
+      gloss:
+        in_list: spanish_verbs
+    set:
+      upos: VERB
+
+  - name: get_verb_agreement
+    scope: token
+    match:
+      gloss:
+        in_list: spanish_verbs
+    set:
+      extract:
+        - type: scan_agreement
+          extractor: agreement_verbs
+          into: ab
+
+  - name: tik_is_demonstrative
+    scope: token
+    match:
+      in_list: ["tik"]
+    set:
+      upos: DET
+      feats:
+        PronType: Dem
