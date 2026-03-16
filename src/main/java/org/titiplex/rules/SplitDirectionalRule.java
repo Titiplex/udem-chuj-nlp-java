@@ -8,12 +8,12 @@ import java.util.Locale;
 public final class SplitDirectionalRule implements CorrectionRule {
     private final String id;
     private final MatchSpec spec;
-    private final List<String> suffixes;
+    private final List<String> splitTokens;
 
-    public SplitDirectionalRule(String id, MatchSpec spec, List<String> suffixes) {
+    public SplitDirectionalRule(String id, MatchSpec spec, List<String> splitTokens) {
         this.id = id;
         this.spec = spec;
-        this.suffixes = suffixes;
+        this.splitTokens = splitTokens;
     }
 
     @Override
@@ -36,7 +36,7 @@ public final class SplitDirectionalRule implements CorrectionRule {
                 continue;
             }
             String surface = tok.chujSurface();
-            String matched = suffixes.stream()
+            String matched = splitTokens.stream()
                     .filter(sf -> !sf.isBlank()
                             && surface.toLowerCase(Locale.ROOT).endsWith(sf.toLowerCase(Locale.ROOT))
                             && surface.length() > sf.length())

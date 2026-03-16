@@ -10,44 +10,36 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Reader for plain-text interlinear blocks.
- * Supports both:
- * - blank-line separated blocks with 3 lines
- * - numbered examples with optional continuation lines
- */
 public final class RawTextReader implements BlockReader {
+
     @Override
     public List<RawBlock> read(InputStream inputStream) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-            List<String> lines = new ArrayList<>();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                lines.add(InterlinearBlockParser.normalize(line));
-            }
-
-            boolean hasNumberedExamples = lines.stream().anyMatch(InterlinearBlockParser::isNumberedStart);
-            if (hasNumberedExamples) {
-                return InterlinearBlockParser.parseNumberedLines(lines);
-            }
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
 
             List<RawBlock> out = new ArrayList<>();
             List<String> current = new ArrayList<>();
             int id = 1;
+
+            String line;
             while ((line = reader.readLine()) != null) {
-                String trimmed = line.trim();
-                if (trimmed.isEmpty()) {
+                String normalized = InterlinearBlockParser.normalize(line);
+
+                if (normalized.isBlank()) {
                     if (!current.isEmpty()) {
                         out.add(toBlock(id++, current));
                         current.clear();
                     }
                     continue;
                 }
-                current.add(trimmed);
+
+                current.add(normalized);
             }
+
             if (!current.isEmpty()) {
                 out.add(toBlock(id, current));
             }
+
             return out;
         }
     }
@@ -55,7 +47,10 @@ public final class RawTextReader implements BlockReader {
     private RawBlock toBlock(int id, List<String> lines) {
         String chuj = !lines.isEmpty() ? lines.get(0) : "";
         String gloss = lines.size() > 1 ? lines.get(1) : "";
-        String translation = lines.size() > 2 ? String.join(" ", lines.subList(2, lines.size())) : "";
+        String translation = lines.size() > 2
+                ? String.join(" ", lines.subList(2, lines.size()))
+                : "";
+
         return new RawBlock(id, chuj, gloss, translation);
     }
 }

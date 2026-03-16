@@ -2,49 +2,107 @@ package org.titiplex.rules;
 
 import org.titiplex.model.AlignedToken;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public final class GlossBeforeAfterRule implements CorrectionRule {
     private final String id;
-    private final RuleSelector selector;
+    private final MatchSpec spec;
     private final Map<String, String> mapping;
     private final boolean ignoreCase;
 
-    public GlossBeforeAfterRule(String id, RuleSelector selector, Map<String, String> mapping, boolean ignoreCase) {
+    public GlossBeforeAfterRule(String id,
+                                MatchSpec spec,
+                                Map<String, String> mapping,
+                                boolean ignoreCase) {
         this.id = id;
-        this.selector = selector;
+        this.spec = spec;
         this.mapping = Map.copyOf(mapping);
         this.ignoreCase = ignoreCase;
     }
 
-    @Override public String id() { return id; }
+    @Override
+    public String id() {
+        return id;
+    }
 
     @Override
     public void apply(RuleContext context) {
-        for (int index : selector.select(context.alignedTokens())) {
-            AlignedToken token = context.get(index);
-            List<String> newGloss = new ArrayList<>();
-            for (String gloss : token.glossSegments()) {
-                String key = ignoreCase ? (gloss == null ? "" : gloss.toLowerCase(Locale.ROOT)) : gloss;
-                newGloss.add(mapping.getOrDefault(key, gloss));
+        for (int i = 0; i < context.size(); i++) {
+            int target = TokenPatternMatcher.resolveTargetIndex(context.alignedTokens(), i, spec);
+            if (target < 0) {
+                continue;
             }
-            context.replace(index, context.rebuildToken(token.chujSegments(), newGloss));
+
+            AlignedToken token = context.get(target);
+
+            String surfaceKey = normalize(token.glossSurface());
+            String surfaceReplacement = mapping.get(surfaceKey);
+
+            if (surfaceReplacement != null) {
+                List<String> newGloss = splitSurface(surfaceReplacement);
+                context.replace(target, context.rebuildToken(token.chujSegments(), newGloss));
+                continue;
+            }
+
+            List<String> newGloss = new ArrayList<>();
+            boolean changed = false;
+
+            for (String gloss : token.glossSegments()) {
+                String key = normalize(gloss);
+                String replacement = mapping.get(key);
+                if (replacement != null) {
+                    newGloss.add(replacement);
+                    changed = true;
+                } else {
+                    newGloss.add(gloss);
+                }
+            }
+
+            if (changed) {
+                context.replace(target, context.rebuildToken(token.chujSegments(), newGloss));
+            }
         }
     }
 
-    public static Map<String, String> buildMapping(List<String> before, List<String> after, boolean ignoreCase) {
+    public static Map<String, String> buildMapping(List<String> before,
+                                                   List<String> after,
+                                                   boolean ignoreCase) {
         Map<String, String> out = new HashMap<>();
-        if (after.size() == 1) {
-            for (String b : before) out.put(ignoreCase ? b.toLowerCase(Locale.ROOT) : b, after.getFirst());
+        if (before == null || after == null || before.isEmpty() || after.isEmpty()) {
             return out;
         }
-        for (int i = 0; i < Math.min(before.size(), after.size()); i++) {
-            out.put(ignoreCase ? before.get(i).toLowerCase(Locale.ROOT) : before.get(i), after.get(i));
+
+        if (after.size() == 1) {
+            String target = after.getFirst();
+            for (String b : before) {
+                out.put(ignoreCase ? normalizeStatic(b) : b, target);
+            }
+            return out;
         }
+
+        for (int i = 0; i < Math.min(before.size(), after.size()); i++) {
+            String key = ignoreCase ? normalizeStatic(before.get(i)) : before.get(i);
+            out.put(key, after.get(i));
+        }
+
         return out;
+    }
+
+    private List<String> splitSurface(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return List.of(value.split("-"));
+    }
+
+    private String normalize(String s) {
+        if (s == null) {
+            return "";
+        }
+        return ignoreCase ? normalizeStatic(s) : s;
+    }
+
+    private static String normalizeStatic(String s) {
+        return s == null ? "" : s.toLowerCase(Locale.ROOT);
     }
 }
