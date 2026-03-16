@@ -16,6 +16,11 @@ class PythonStyleYamlRuleLoaderTest {
     void loadsDeleteAndRewriteRulesAndAppliesThem() {
         String yaml = """
                 rules:
+                  - id: strip_apostrophe
+                    rewrite:
+                      delete:
+                        type: chars
+                        chars: ["'"]
                   - id: normalize_surface
                     rewrite:
                       before: [ixim-na]
@@ -25,11 +30,6 @@ class PythonStyleYamlRuleLoaderTest {
                       gloss:
                         before: [N, n]
                         after: [NOUN]
-                  - id: strip_apostrophe
-                    rewrite:
-                      delete:
-                        type: chars
-                        chars: ["'"]
                 """;
 
         PythonStyleYamlRuleLoader loader = new PythonStyleYamlRuleLoader();

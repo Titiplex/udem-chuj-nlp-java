@@ -28,18 +28,36 @@ public final class SurfaceRewriteRule implements CorrectionRule {
             if (!TokenPatternMatcher.matchesAt(context.alignedTokens(), i, spec)) continue;
             AlignedToken tok = context.get(i);
             List<String> newChuj = new ArrayList<>(tok.chujSegments());
+            boolean modified = false;
+            
             for (int k = 0; k < newChuj.size(); k++) {
                 String repl = surfaceMap.get(norm(newChuj.get(k)));
-                if (repl != null) newChuj.set(k, repl);
+                if (repl != null) {
+                    newChuj.set(k, repl);
+                    modified = true;
+                }
             }
-            String surfaceRepl = surfaceMap.get(norm(tok.chujSurface()));
-            if (surfaceRepl != null) newChuj = List.of(surfaceRepl.split("-"));
+            
+            // Try to match the reconstructed surface from segments
+            String reconstructedSurface = String.join("-", tok.chujSegments());
+            String surfaceRepl = surfaceMap.get(norm(reconstructedSurface));
+            if (surfaceRepl != null) {
+                newChuj = List.of(surfaceRepl.split("-"));
+                modified = true;
+            }
+            
             List<String> newGloss = new ArrayList<>(tok.glossSegments());
             for (int k = 0; k < newGloss.size(); k++) {
                 String repl = glossMap.get(norm(newGloss.get(k)));
-                if (repl != null) newGloss.set(k, repl);
+                if (repl != null) {
+                    newGloss.set(k, repl);
+                    modified = true;
+                }
             }
-            context.replace(i, context.rebuildToken(newChuj, newGloss));
+            
+            if (modified) {
+                context.replace(i, context.rebuildToken(newChuj, newGloss));
+            }
         }
     }
 
