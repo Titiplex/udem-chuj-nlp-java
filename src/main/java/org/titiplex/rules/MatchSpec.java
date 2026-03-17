@@ -12,14 +12,17 @@ public record MatchSpec(
         boolean tokenStartsWithVowel,
         List<String> glossValues,
         List<String> glossStartsWith,
-        String glossSpecial,
+        String lexiconRef,
         Integer betweenLength,
         String targets,
-        String chujSide,
-        String rootFromGloss,
+        String anchorSide,
+        String rootLexiconRef,
         boolean rootStartsWithVowel
 ) {
     public static MatchSpec empty() {
-        return new MatchSpec(List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), false, List.of(), List.of(), null, null, null, null, null, false);
+        return new MatchSpec(
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), false,
+                List.of(), List.of(), null, null, null, null, null, false
+        );
     }
 }

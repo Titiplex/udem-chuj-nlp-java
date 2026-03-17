@@ -16,4 +16,12 @@ public record AlignedToken(
                 List.copyOf(glossSegments)
         );
     }
+
+    public String surface() {
+        return chujSurface;
+    }
+
+    public List<String> surfaceSegments() {
+        return chujSegments;
+    }
 }

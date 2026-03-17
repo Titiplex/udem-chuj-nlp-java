@@ -12,6 +12,7 @@ public final class AnnotationConfig {
     private final Map<String, ExtractorDef> extractors = new LinkedHashMap<>();
     private final Set<String> posDefinitions = new LinkedHashSet<>();
     private final Set<String> featDefinitions = new LinkedHashSet<>();
+    private final LexiconRegistry lexiconRegistry = new LexiconRegistry();
 
     public GlossMapper glossMapper() {
         return glossMapper;
@@ -33,10 +34,14 @@ public final class AnnotationConfig {
         return featDefinitions;
     }
 
+    public LexiconRegistry lexiconRegistry() {
+        return lexiconRegistry;
+    }
+
     public void applyExtractor(String name, AlignedToken token, ConlluLine line, Map<String, Object> ctx) {
         ExtractorDef ex = extractors.get(name);
         if (ex == null) return;
-        Map<String, Object> intoMap = extractAgreement(token);
+        Map<String, Object> intoMap = ex.extract(token);
         if (intoMap.isEmpty()) return;
         ctx.put(name, intoMap);
         if (line == null) return;
@@ -52,21 +57,29 @@ public final class AnnotationConfig {
         }
     }
 
-    private Map<String, Object> extractAgreement(AlignedToken token) {
-        Map<String, Object> out = new LinkedHashMap<>();
-        Pattern pattern = Pattern.compile("^([AB])([123])(SG|PL)?$", Pattern.CASE_INSENSITIVE);
-        for (String gloss : token.glossSegments()) {
-            Matcher m = pattern.matcher(gloss.toUpperCase(Locale.ROOT));
-            if (!m.matches()) continue;
-            Map<String, Object> values = new LinkedHashMap<>();
-            values.put("person", m.group(2));
-            values.put("number", "PL".equalsIgnoreCase(m.group(3)) ? "Plur" : "Sing");
-            out.put(m.group(1).toUpperCase(Locale.ROOT), values);
-        }
-        return out;
-    }
 
-    public record ExtractorDef(String name, List<RoutingRule> routing) {
+    public record ExtractorDef(
+            String name,
+            Pattern tagPattern,
+            List<RoutingRule> routing
+    ) {
+        public Map<String, Object> extract(AlignedToken token) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            for (String gloss : token.glossSegments()) {
+                Matcher m = tagPattern.matcher(gloss.toUpperCase(Locale.ROOT));
+                if (!m.matches()) continue;
+
+                String series = m.group("series");
+                String person = m.group("person");
+                String number = m.group("number");
+
+                Map<String, String> values = new LinkedHashMap<>();
+                values.put("person", person);
+                values.put("number", number != null && !number.isBlank() ? "Plur" : "Sing");
+                out.put(series, values);
+            }
+            return out;
+        }
     }
 
     public record RoutingRule(String when, Map<String, String> set) {

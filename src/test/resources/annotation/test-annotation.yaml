@@ -1,0 +1,53 @@
+lexicons:
+  spanish_verbs:
+    - lexicons/test_verbs.csv
+  spanish_words:
+    - lexicons/test_words.json
+
+def:
+  pos: [ "VERB", "ADP", "DET", "PART", "INTJ", "NOUN", "PUNCT", "NUM", "CCONJ" ]
+  feats: [ "Aspect", "Number", "Pers[subj]", "Number[subj]", "SubCat", "Polarity" ]
+
+extractors:
+  agreement_verbs:
+    tag_schema:
+      series:
+        A: { role: "ERG" }
+        B: { role: "ABS" }
+      values:
+        person: [ "1", "2", "3" ]
+        number:
+          suffix: "PL"
+          value_if_present: "Plur"
+          value_if_absent: "Sing"
+    routing:
+      - when: "has(A) & has(B)"
+        set: { SubCat: "Trans" }
+      - when: "has(B) & !has(A)"
+        set: { SubCat: "Intrans" }
+      - when: "has(A) & !has(B)"
+        set: { SubCat: "Trans" }
+
+gloss_map:
+  pos:
+    - { "PREP": "ADP" }
+    - { "DST": "DET" }
+    - { "INTJ": "INTJ" }
+    - { "CONJ": "CCONJ" }
+  feats:
+    - { "PFV": [ "Aspect", "Perf" ] }
+    - { "IPFV": [ "Aspect", "Imp" ] }
+    - { "NEG": [ "Polarity", "Neg" ] }
+
+rules:
+  - name: identify verbs from gloss lexicon
+    scope: morpheme
+    match:
+      gloss:
+        in_lexicon: spanish_verbs
+    set:
+      upos: VERB
+
+  - name: scan agreement on verb tokens
+    scope: token
+    match:

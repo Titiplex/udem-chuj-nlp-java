@@ -1,0 +1,27 @@
+rules:
+  - id: split_suffix_right
+    rewrite:
+      match:
+        tokens: { isword: [ "stem-ta" ] }
+      split:
+        type: suffix
+        suffixes: [ "ta" ]
+        gloss_placement: right
+
+  - id: split_suffix_left
+    rewrite:
+      match:
+        tokens: { isword: [ "root-kot" ] }
+      split:
+        type: suffix
+        suffixes: [ "kot" ]
+        gloss_placement: left
+
+  - id: split_suffix_duplicate
+    rewrite:
+      match:
+        tokens: { isword: [ "base-kan" ] }
+      split:
+        type: suffix
+        suffixes: [ "kan" ]
+        gloss_placement: duplicate

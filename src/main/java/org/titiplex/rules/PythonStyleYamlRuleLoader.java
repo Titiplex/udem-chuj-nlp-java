@@ -3,11 +3,7 @@ package org.titiplex.rules;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public final class PythonStyleYamlRuleLoader {
@@ -193,21 +189,18 @@ public final class PythonStyleYamlRuleLoader {
         }
     }
 
-    private static void loadSplitRules(String id,
-                                       Map<String, Object> rewrite,
-                                       MatchSpec spec,
-                                       List<CorrectionRule> out) {
+    private static void loadSplitRules(String id, Map<String, Object> rewrite, MatchSpec spec, List<CorrectionRule> out) {
         Map<String, Object> split = RuleYamlSupport.map(rewrite.get("split"));
-        if (split.isEmpty()) {
-            return;
-        }
+        if (split.isEmpty()) return;
 
-        if ("end".equals(RuleYamlSupport.string(split.get("type"), ""))) {
-            out.add(new SplitDirectionalRule(
-                    id + ":split_end",
-                    spec,
-                    RuleYamlSupport.stringList(split.get("tokens"))
-            ));
+        String type = RuleYamlSupport.string(split.get("type"), "");
+        String glossPlacement = RuleYamlSupport.string(split.get("gloss_placement"), "right");
+
+        if ("suffix".equalsIgnoreCase(type) || "end".equalsIgnoreCase(type)) {
+            List<String> suffixes = RuleYamlSupport.stringList(
+                    split.containsKey("suffixes") ? split.get("suffixes") : split.get("tokens")
+            );
+            out.add(new SplitSuffixRule(id + ":split_suffix", spec, suffixes, glossPlacement));
         }
     }
 

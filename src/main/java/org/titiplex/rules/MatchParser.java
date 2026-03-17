@@ -13,29 +13,29 @@ public final class MatchParser {
         Map<String, Object> between = RuleYamlSupport.map(rewrite.get("between"));
         Map<String, Object> tokenMap = RuleYamlSupport.map(match.get("tokens"));
         Map<String, Object> glossMap = RuleYamlSupport.map(match.get("gloss"));
-        Map<String, Object> chujMap = RuleYamlSupport.map(match.get("chuj"));
+        Map<String, Object> surfaceMap = RuleYamlSupport.map(match.get("surface"));
         Object tokenDirect = match.get("tokens");
         List<List<String>> sequences = new ArrayList<>();
+
         if (tokenDirect instanceof List<?> l && !l.isEmpty() && l.get(0) instanceof List<?>) {
-            for (Object o : l) sequences.add(RuleYamlSupport.stringList(o));
-        } else if (tokenDirect instanceof List<?> l && !l.isEmpty() && !(l.get(0) instanceof String)) {
             for (Object o : l) sequences.add(RuleYamlSupport.stringList(o));
         } else if (tokenDirect instanceof List<?> && !RuleYamlSupport.stringList(tokenDirect).isEmpty() && tokenMap.isEmpty()) {
             sequences.add(RuleYamlSupport.stringList(tokenDirect));
         }
-        if (tokenMap.containsKey("isword")) {
+        if (tokenMap.containsKey("isword"))
             for (String s : RuleYamlSupport.stringList(tokenMap.get("isword"))) sequences.add(List.of(s));
-        }
+
 
         List<String> glossValues = new ArrayList<>();
-        String glossSpecial = null;
         Object glossObj = match.get("gloss");
         if (glossObj instanceof String g) {
-            if ("spanish_verb".equals(g)) glossSpecial = g;
-            else glossValues.add(g);
+            glossValues.add(g);
         } else {
             glossValues.addAll(RuleYamlSupport.stringList(glossObj));
         }
+
+        String lexiconRef = RuleYamlSupport.string(glossMap.get("in_lexicon"), null);
+        String rootLexiconRef = RuleYamlSupport.string(surfaceMap.get("root_in_lexicon"), null);
 
         return new MatchSpec(
                 sequences,
@@ -47,12 +47,12 @@ public final class MatchParser {
                 RuleYamlSupport.bool(tokenMap.get("startswith_vowel"), false),
                 glossValues,
                 RuleYamlSupport.stringList(glossMap.get("starts_with")),
-                glossSpecial,
+                lexiconRef,
                 between.containsKey("length") ? Integer.parseInt(between.get("length").toString()) : null,
                 RuleYamlSupport.string(rawRule.get("targets"), null),
-                RuleYamlSupport.string(chujMap.get("side"), null),
-                RuleYamlSupport.string(chujMap.get("root_from_gloss"), null),
-                RuleYamlSupport.bool(chujMap.get("root_startswith_vowel"), false)
+                RuleYamlSupport.string(surfaceMap.get("side"), null),
+                rootLexiconRef,
+                RuleYamlSupport.bool(surfaceMap.get("root_startswith_vowel"), false)
         );
     }
 }

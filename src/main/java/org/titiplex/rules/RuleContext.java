@@ -2,15 +2,19 @@ package org.titiplex.rules;
 
 import org.titiplex.model.AlignedToken;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 public final class RuleContext {
     private final List<AlignedToken> alignedTokens;
+    private final Map<String, Set<String>> lexicons;
 
     public RuleContext(List<AlignedToken> alignedTokens) {
+        this(alignedTokens, Map.of());
+    }
+
+    public RuleContext(List<AlignedToken> alignedTokens, Map<String, Set<String>> lexicons) {
         this.alignedTokens = new ArrayList<>(alignedTokens);
+        this.lexicons = lexicons == null ? Map.of() : lexicons;
     }
 
     public List<AlignedToken> alignedTokens() {
@@ -37,31 +41,20 @@ public final class RuleContext {
         alignedTokens.remove(index);
     }
 
-    public AlignedToken rebuildToken(List<String> chujSegments, List<String> glossSegments) {
-        return AlignedToken.of(String.join("-", chujSegments), String.join("-", glossSegments), chujSegments, glossSegments);
+    public AlignedToken rebuildToken(List<String> surfaceSegments, List<String> glossSegments) {
+        return AlignedToken.of(
+                String.join("-", surfaceSegments),
+                String.join("-", glossSegments),
+                surfaceSegments,
+                glossSegments
+        );
     }
 
-    public void shiftRightGloss(int shiftIndex) {
-        if (shiftIndex < 0 || shiftIndex >= alignedTokens.size()) return;
-        AlignedToken current = alignedTokens.get(shiftIndex);
-        if (!current.chujSegments().isEmpty()) return;
-        for (int k = shiftIndex + 1; k < alignedTokens.size(); k++) {
-            AlignedToken next = alignedTokens.get(k);
-            if (!next.chujSegments().isEmpty()) {
-                alignedTokens.set(shiftIndex, AlignedToken.of(next.chujSurface(), current.glossSurface(), next.chujSegments(), current.glossSegments()));
-                alignedTokens.set(k, AlignedToken.of("", next.glossSurface(), List.of(), next.glossSegments()));
-                return;
-            }
+    public static List<String> splitSurface(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
         }
-    }
-
-    public int targetIndex(int anchor, String targets) {
-        if (targets == null || targets.isBlank()) return anchor;
-        return switch (targets.toLowerCase(Locale.ROOT)) {
-            case "i" -> anchor;
-            case "j" -> Math.min(anchor + 1, alignedTokens.size() - 1);
-            default -> anchor;
-        };
+        return List.of(value.split("-"));
     }
 
     public boolean startsWithVowelAt(int index) {
@@ -72,34 +65,23 @@ public final class RuleContext {
         return "aeiou".indexOf(c) >= 0;
     }
 
-    public boolean hasSpanishVerbAt(int index) {
-        if (index < 0 || index >= alignedTokens.size()) return false;
-        AlignedToken t = alignedTokens.get(index);
-        for (String g : t.glossSegments()) {
-            if (looksLikeSpanishVerb(g)) return true;
+    public boolean tokenMatchesLexicon(AlignedToken token, String lexiconName) {
+        Set<String> lexicon = lexicons.getOrDefault(lexiconName, Set.of());
+        for (String gloss : token.glossSegments()) {
+            if (lexicon.contains(norm(gloss))) return true;
         }
-        return false;
+        for (String seg : token.chujSegments()) {
+            if (lexicon.contains(norm(seg))) return true;
+        }
+        return lexicon.contains(norm(token.chujSurface())) || lexicon.contains(norm(token.glossSurface()));
     }
 
-    public String inferredRootAt(int anchor, String side) {
-        int idx = switch ((side == null ? "" : side).toLowerCase(Locale.ROOT)) {
-            case "j" -> Math.min(anchor + 1, alignedTokens.size() - 1);
-            case "i" -> anchor;
-            default -> anchor;
-        };
-        if (idx < 0 || idx >= alignedTokens.size()) return "";
-        return alignedTokens.get(idx).chujSurface();
+    public boolean hasLexiconMatchAt(int index, String lexiconName) {
+        if (index < 0 || index >= alignedTokens.size()) return false;
+        return tokenMatchesLexicon(alignedTokens.get(index), lexiconName);
     }
 
-    private boolean looksLikeSpanishVerb(String gloss) {
-        if (gloss == null || gloss.isBlank()) return false;
-        String g = gloss.trim();
-        String lower = g.toLowerCase(Locale.ROOT);
-        if (lower.contains(" ")) return false;
-        if (g.matches(".*[A-Z].*")) return false;
-        return lower.matches(".*(ar|er|ir)$") || List.of(
-                "estar", "ser", "ir", "venir", "hacer", "decir", "dar", "ver", "poder", "tener",
-                "regresar", "existir", "exist", "malo", "feo", "bueno", "hasta", "todavia"
-        ).contains(lower);
+    private static String norm(String v) {
+        return v == null ? "" : v.toLowerCase(Locale.ROOT);
     }
 }
