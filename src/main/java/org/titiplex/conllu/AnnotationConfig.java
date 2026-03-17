@@ -38,20 +38,42 @@ public final class AnnotationConfig {
         return lexiconRegistry;
     }
 
-    public void applyExtractor(String name, AlignedToken token, ConlluLine line, Map<String, Object> ctx) {
+    public void applyExtractor(String name, AlignedToken token, ConlluLine line, Map ctx) {
+        applyExtractor(name, null, token, line, ctx);
+    }
+
+    public void applyExtractor(String name, String into, AlignedToken token, ConlluLine line, Map ctx) {
         ExtractorDef ex = extractors.get(name);
         if (ex == null) return;
-        Map<String, Object> intoMap = ex.extract(token);
-        if (intoMap.isEmpty()) return;
-        ctx.put(name, intoMap);
+
+        Map extracted = ex.extract(token);
+        if (extracted.isEmpty()) return;
+
+        String ctxKey = (into != null && !into.isBlank()) ? into : name;
+        ctx.put(ctxKey, extracted);
+
         if (line == null) return;
+
         for (RoutingRule rr : ex.routing()) {
-            if (!ConditionEvaluator.evaluate(rr.when(), intoMap)) continue;
-            Map<String, String> feats = new LinkedHashMap<>();
+            if (!ConditionEvaluator.evaluate(rr.when(), extracted)) continue;
+
+            Map feats = new LinkedHashMap<>();
             for (var e : rr.set().entrySet()) {
-                String resolved = TemplateResolver.resolvePath(intoMap, e.getValue());
-                if (!resolved.isBlank()) feats.put(e.getKey(), resolved);
+                String raw = (String) e.getValue();
+                if (raw == null || raw.isBlank()) continue;
+
+                String resolved;
+                if (raw.contains("{")) {
+                    resolved = TemplateResolver.render(raw, ctx);
+                } else {
+                    resolved = raw;
+                }
+
+                if (resolved != null && !resolved.isBlank()) {
+                    feats.put(e.getKey(), resolved);
+                }
             }
+
             line.putAllFeats(feats, false);
             break;
         }

@@ -157,14 +157,19 @@ public final class AnnotationConfigLoader {
 
     private static void loadListOrLiteral(Set<String> out, String value, Path baseDir) {
         if (value == null || value.isBlank()) return;
-        Path candidate = baseDir == null ? null : baseDir.resolve(value).normalize();
-        if (candidate != null && Files.exists(candidate)) {
+
+        Path candidate = resolveCandidate(baseDir, value);
+        if (candidate != null) {
             try {
-                out.addAll(Files.readAllLines(candidate).stream().map(String::trim).filter(s -> !s.isBlank()).toList());
+                out.addAll(Files.readAllLines(candidate).stream()
+                        .map(String::trim)
+                        .filter(s -> !s.isBlank())
+                        .toList());
                 return;
             } catch (IOException ignored) {
             }
         }
+
         out.add(value);
     }
 
@@ -210,14 +215,31 @@ public final class AnnotationConfigLoader {
 
     private static void loadLexiconValueOrPath(Set<String> out, String value, Path baseDir) {
         if (value == null || value.isBlank()) return;
-        Path candidate = baseDir == null ? null : baseDir.resolve(value).normalize();
-        if (candidate != null && Files.exists(candidate)) {
+
+        Path candidate = resolveCandidate(baseDir, value);
+        if (candidate != null) {
             try {
                 out.addAll(LexiconFileLoader.load(candidate));
                 return;
             } catch (IOException ignored) {
             }
         }
+
         out.add(value);
+    }
+
+    private static Path resolveCandidate(Path baseDir, String value) {
+        if (baseDir == null) return null;
+
+        Path direct = baseDir.resolve(value).normalize();
+        if (Files.exists(direct)) return direct;
+
+        Path parent = baseDir.getParent();
+        if (parent != null) {
+            Path sibling = parent.resolve(value).normalize();
+            if (Files.exists(sibling)) return sibling;
+        }
+
+        return null;
     }
 }

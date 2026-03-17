@@ -86,7 +86,7 @@ public final class AnnotationRule {
             for (String part : parts) {
                 if (matchesValue(part)) return true;
             }
-            return regex == null && inList.isEmpty() && lexiconRef == null && !matchExtracts.isEmpty();
+            return regex == null && inList.isEmpty() && (lexiconRef != null || !matchExtracts.isEmpty());
         }
 
         if (matchesValue(surface)) return true;
@@ -107,16 +107,25 @@ public final class AnnotationRule {
     public void apply(ConlluLine line, AlignedToken tok, AnnotationConfig config, Map<String, Object> ctx) {
         if (!upos.isBlank() && "_".equals(line.upos())) line.setUpos(upos);
         line.putAllFeats(feats, false);
+
+        for (Map<String, String> ex : setExtracts) {
+            if ("scan_agreement".equalsIgnoreCase(ex.get("type"))) {
+
+                config.applyExtractor(
+                        (String) ex.getOrDefault("extractor", "agreement_verbs"),
+                        (String) ex.get("into"),
+                        tok,
+                        line,
+                        ctx
+                );
+            }
+        }
         for (var e : featsTemplate.entrySet()) {
             String resolved = TemplateResolver.render(e.getValue(), ctx);
             if (!resolved.isBlank()) line.putFeat(e.getKey(), resolved, false);
         }
-        for (Map<String, String> ex : setExtracts) {
-            if ("scan_agreement".equalsIgnoreCase(ex.get("type"))) {
-                config.applyExtractor(ex.getOrDefault("extractor", "agreement_verbs"), tok, line, ctx);
-            }
-        }
     }
+
 
     public int priority() {
         return priority;

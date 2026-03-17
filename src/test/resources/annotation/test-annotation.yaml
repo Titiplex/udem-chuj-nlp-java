@@ -6,7 +6,7 @@ lexicons:
 
 def:
   pos: [ "VERB", "ADP", "DET", "PART", "INTJ", "NOUN", "PUNCT", "NUM", "CCONJ" ]
-  feats: [ "Aspect", "Number", "Pers[subj]", "Number[subj]", "SubCat", "Polarity" ]
+  feats: [ "Aspect", "Number", "Pers[subj]", "Number[subj]", "Pers[obj]", "Number[obj]", "SubCat", "Polarity" ]
 
 extractors:
   agreement_verbs:
@@ -51,3 +51,15 @@ rules:
   - name: scan agreement on verb tokens
     scope: token
     match:
+      gloss:
+        in_lexicon: spanish_verbs
+    set:
+      extract:
+        - type: scan_agreement
+          extractor: agreement_verbs
+          into: ab
+    feats_template:
+      Pers[subj]: "{ab.A.person}"
+      Number[subj]: "{ab.A.number}"
+      Pers[obj]: "{ab.B.person}"
+      Number[obj]: "{ab.B.number}"
