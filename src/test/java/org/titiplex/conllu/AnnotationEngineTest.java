@@ -5,14 +5,69 @@ import org.titiplex.model.AlignedToken;
 import org.titiplex.model.CorrectedBlock;
 
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SuppressWarnings("SequencedCollectionMethodCanBeUsed")
 class AnnotationEngineTest {
 
     @Test
     void agreementHeuristicsProduceVerbAndAgreementFeats() {
         AnnotationConfig config = new AnnotationConfig();
+
+        // Configure agreement extractor
+        Pattern tagPattern = Pattern.compile(
+            "^(?<series>(A|B))(?<person>(1|2|3))(?<number>PL)?$",
+            Pattern.CASE_INSENSITIVE
+        );
+
+        List<AnnotationConfig.RoutingRule> routingRules = List.of(
+            new AnnotationConfig.RoutingRule(
+                "has(A) & has(B)",
+                Map.of("SubCat", "Trans")
+            ),
+            new AnnotationConfig.RoutingRule(
+                "has(B) & !has(A)",
+                Map.of("SubCat", "Intrans")
+            ),
+            new AnnotationConfig.RoutingRule(
+                "has(A) & !has(B)",
+                Map.of("SubCat", "Trans")
+            )
+        );
+
+        config.extractors().put(
+            "agreement_verbs",
+            new AnnotationConfig.ExtractorDef("agreement_verbs", tagPattern, routingRules)
+        );
+
+        // Add rule to identify verbs with agreement
+        AnnotationRule verbRule = new AnnotationRule(
+            "identify verbs from agreement",
+            "token",
+            100,
+            null,
+            java.util.Set.of(),
+            false,
+            "",
+            "VERB",
+            Map.of(),
+            Map.of(),
+            List.of(),
+            List.of(
+                Map.of(
+                    "type", "scan_agreement",
+                    "extractor", "agreement_verbs"
+                )
+            ),
+            List.of(),
+            List.of()
+        );
+
+        config.rules().add(verbRule);
+
         AnnotationEngine engine = new AnnotationEngine(config);
 
         CorrectedBlock block = new CorrectedBlock(

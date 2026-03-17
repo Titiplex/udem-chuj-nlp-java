@@ -30,13 +30,14 @@ public final class AnnotationEngine {
             line.setMisc(token.glossSurface().isBlank() ? "_" : "Gloss=" + token.glossSurface());
 
             Map<String, Object> ctx = baseContext(token, line);
-            applyGlossMap(token, line);
 
             for (AnnotationRule rule : config.rules()) {
                 if (rule.matches(token, config, ctx)) {
                     rule.apply(line, token, config, ctx);
                 }
             }
+
+            applyGlossMap(token, line);
 
             if ("_".equals(line.upos())) line.setUpos(guessUpos(token));
             line.setLemma(lemmatizer.lemmaFor(token, line.upos()));

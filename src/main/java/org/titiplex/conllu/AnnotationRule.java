@@ -86,7 +86,7 @@ public final class AnnotationRule {
             for (String part : parts) {
                 if (matchesValue(part)) return true;
             }
-            return regex == null && inList.isEmpty() && lexiconRef == null && !matchExtracts.isEmpty();
+            return regex == null && inList.isEmpty() && (lexiconRef != null || !matchExtracts.isEmpty());
         }
 
         if (matchesValue(surface)) return true;
