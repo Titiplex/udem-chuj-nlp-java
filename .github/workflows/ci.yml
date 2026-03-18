@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master", "main", "dev", "feature/**" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Validate repository layout
+        run: bash scripts/validate-layout.sh
+
+      - name: Run tests
+        run: mvn -B clean verify
+
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: |
+            target/surefire-reports
+            target/failsafe-reports
