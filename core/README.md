@@ -16,6 +16,8 @@ Supposing a file `input.docx` and a file `rules.yaml`.
 mvn test
 mvn package
 java -cp target/chuj-nlp-core-0.1.0.jar org.titiplex.Main input.docx rules.yaml output.conllu
+# or
+java -java target/chuj-nlp-core-0.1.0.jar prepare input.docx rules.yaml output.conllu
 ```
 
 It will generate a file `output.conllu`.
