@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_1.xsd"
+             version="3.1">
+    <persistence-unit name="chujDesktopPU" transaction-type="RESOURCE_LOCAL">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <class>org.titiplex.desktop.persistence.entity.RuleEntity</class>
+        <class>org.titiplex.desktop.persistence.entity.ExampleEntity</class>
+        <class>org.titiplex.desktop.persistence.entity.CorrectionEntity</class>
+        <class>org.titiplex.desktop.persistence.entity.ValidationRunEntity</class>
+        <class>org.titiplex.desktop.persistence.entity.ValidationMessageEntity</class>
+        <class>org.titiplex.desktop.persistence.entity.LexiconEntryEntity</class>
+
+        <properties>
+            <property name="jakarta.persistence.schema-generation.database.action" value="none"/>
+        </properties>
+    </persistence-unit>
+</persistence>
