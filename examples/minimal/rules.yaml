@@ -1,0 +1,44 @@
+def:
+  pos:
+    ["ADJ", "ADV", "INTJ", "NOUN", "PROPN", "VERB", "PUNCT", "X", "ADP",
+     "AUX", "CCONJ", "DET", "NUM", "PART", "PRON", "SCONJ"]
+  feats:
+    ["Person", "Number", "Mood", "Aspect", "Tense", "Polarity"]
+
+lexicons:
+  SpanishVerbHints:
+    path: lexicons/spanish_verbs.csv
+    format: csv
+    key: form
+
+extractors:
+  agreement:
+    kind: regex
+    source: gloss
+    pattern: '(?<person>[123])(?<number>SG|PL)'
+
+rules:
+  - name: punctuation
+    priority: 1000
+    when:
+      form_in: [".", ",", ";", ":", "?", "!"]
+    set:
+      upos: PUNCT
+
+  - name: finite_verb_from_gloss
+    priority: 100
+    when:
+      gloss_contains_any: ["A", "B", "1SG", "2SG", "3SG", "PL"]
+    extract: [agreement]
+    set:
+      upos: VERB
+      feats_template:
+        Person: "${ctx.person}"
+        Number: "${ctx.number}"
+
+  - name: default_noun
+    priority: 10
+    when:
+      fallback: true
+    set:
+      upos: NOUN

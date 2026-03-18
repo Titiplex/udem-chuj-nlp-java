@@ -1,0 +1,6 @@
+# sent_id = minimal-1
+# text = max-ach ixim .
+1	max	_	VERB	_	Person=1|Number=SG	0	root	_	Gloss=1SG-go
+2	ach	_	NOUN	_	_	1	obj	_	Gloss=man
+3	ixim	_	NOUN	_	_	1	obj	_	Gloss=corn
+4	.	_	PUNCT	_	_	1	punct	_	_

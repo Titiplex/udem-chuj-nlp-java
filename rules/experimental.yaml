@@ -1,0 +1,28 @@
+def:
+  pos:
+    ["ADJ", "ADV", "INTJ", "NOUN", "PROPN", "VERB", "PUNCT", "X", "ADP",
+     "AUX", "CCONJ", "DET", "NUM", "PART", "PRON", "SCONJ"]
+  feats:
+    ["Person", "Number", "Mood", "Aspect", "Tense", "Polarity"]
+
+extractors:
+  directional_suffix:
+    kind: regex
+    source: gloss
+    pattern: '(?<base>.+)-(?<dir>DIR(?:\.[^\s-]+)?)$'
+
+rules:
+  - name: split_directional_suffix_candidate
+    priority: 300
+    when:
+      gloss_matches_extractor: directional_suffix
+    set:
+      note: "Candidate rule for future split handling of final directional morphemes."
+      upos: VERB
+
+  - name: fallback_unknown
+    priority: 0
+    when:
+      fallback: true
+    set:
+      upos: X
