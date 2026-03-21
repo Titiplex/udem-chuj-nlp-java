@@ -1,6 +1,6 @@
 package org.titiplex.app.ui.frame;
 
-import org.springframework.stereotype.Component;
+import org.titiplex.app.service.RuleService;
 import org.titiplex.app.ui.common.Dialogs;
 import org.titiplex.app.ui.rule.RulePanel;
 
@@ -10,15 +10,15 @@ import java.awt.*;
 public class MainFrame extends JFrame {
     private final JLabel statusLabel = new JLabel("Ready");
 
-    public MainFrame() {
+    public MainFrame(RuleService ruleService) {
         super("test");
 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(1400, 900);
+        setSize(600, 400);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        RulePanel rulePanel = new RulePanel();
+        RulePanel rulePanel = new RulePanel(ruleService);
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Rules", rulePanel);

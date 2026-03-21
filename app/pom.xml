@@ -102,6 +102,8 @@
                 <version>3.11.0</version>
                 <configuration>
                     <release>${maven.compiler.release}</release>
+                    <source>22</source>
+                    <target>22</target>
                 </configuration>
             </plugin>
 
