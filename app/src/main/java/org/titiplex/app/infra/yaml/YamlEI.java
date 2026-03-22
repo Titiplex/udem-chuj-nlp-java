@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 
-public class YamlEI {
+public final class YamlEI {
     private final Yaml yaml = new Yaml();
 
     @SuppressWarnings("unchecked")

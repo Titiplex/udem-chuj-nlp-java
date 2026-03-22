@@ -30,6 +30,9 @@ public class Entry {
     @Column(name = "translation_text", columnDefinition = "CLOB")
     private String translationText;
 
+    @Column(columnDefinition = "CLOB")
+    private String description;
+
     @PrePersist
     public void prePersist() {
         Instant now = Instant.now();

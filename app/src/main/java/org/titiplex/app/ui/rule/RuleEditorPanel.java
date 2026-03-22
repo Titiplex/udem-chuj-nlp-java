@@ -3,18 +3,18 @@ package org.titiplex.app.ui.rule;
 import org.titiplex.app.domain.rule.RuleId;
 import org.titiplex.app.domain.rule.RuleVersion;
 import org.titiplex.app.persistence.entity.Rule;
+import org.titiplex.app.ui.common.JPlaceholderTextField;
 
 import javax.swing.*;
 import java.awt.*;
 import java.time.Instant;
 
 public final class RuleEditorPanel extends JPanel {
-    private final JTextField ruleIdField = new JTextField();
-    private final JTextField nameField = new JTextField();
+    private final JPlaceholderTextField ruleIdField = new JPlaceholderTextField("Rule id");
+    private final JPlaceholderTextField nameField = new JPlaceholderTextField("Rule name");
     private final JTextArea descriptionArea = new JTextArea(4, 80);
     private final JTextArea yamlArea = new JTextArea(20, 80);
     private final JCheckBox enabledBox = new JCheckBox("Enabled", true);
-
     private Rule currentRule;
 
     public RuleEditorPanel() {

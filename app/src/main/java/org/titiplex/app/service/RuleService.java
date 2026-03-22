@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class RuleService {
+public final class RuleService {
     private final RuleRepository ruleRepository;
     private final RuleValidationService validationService;
     private final YamlEI exporter = new YamlEI();

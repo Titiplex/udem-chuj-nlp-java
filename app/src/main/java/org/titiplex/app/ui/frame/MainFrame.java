@@ -1,7 +1,10 @@
 package org.titiplex.app.ui.frame;
 
+import org.titiplex.app.service.CorrectedEntryService;
+import org.titiplex.app.service.RawEntryService;
 import org.titiplex.app.service.RuleService;
 import org.titiplex.app.ui.common.Dialogs;
+import org.titiplex.app.ui.entry.EntryPanel;
 import org.titiplex.app.ui.rule.RulePanel;
 
 import javax.swing.*;
@@ -10,7 +13,11 @@ import java.awt.*;
 public class MainFrame extends JFrame {
     private final JLabel statusLabel = new JLabel("Ready");
 
-    public MainFrame(RuleService ruleService) {
+    public MainFrame(
+            RuleService ruleService,
+            CorrectedEntryService correctedEntryService,
+            RawEntryService rawEntryService
+    ) {
         super("test");
 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -19,9 +26,11 @@ public class MainFrame extends JFrame {
         setLayout(new BorderLayout());
 
         RulePanel rulePanel = new RulePanel(ruleService);
+        EntryPanel entryPanel = new EntryPanel(correctedEntryService, rawEntryService);
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Rules", rulePanel);
+        tabs.addTab("Entries", entryPanel);
 
         add(tabs, BorderLayout.CENTER);
         add(statusLabel, BorderLayout.SOUTH);
