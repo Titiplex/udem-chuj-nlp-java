@@ -138,16 +138,22 @@ public class EntryEditorPanel extends JPanel {
             return;
         }
 
-        idField.setText(String.valueOf(entry.getId()));
-        rawEntryIdField.setText(entry.getRawEntry().getId() == null ? "" : String.valueOf(entry.getRawEntry().getId()));
-        createdField.setText(String.valueOf(entry.getCreatedAt()));
-        updatedField.setText(String.valueOf(entry.getUpdatedAt()));
+        idField.setText(entry.getId() == null ? "" : String.valueOf(entry.getId()));
+        rawEntryIdField.setText(
+                entry.getRawEntry() == null || entry.getRawEntry().getId() == null
+                        ? ""
+                        : String.valueOf(entry.getRawEntry().getId())
+        );
+        createdField.setText(entry.getCreatedAt() == null ? "" : String.valueOf(entry.getCreatedAt()));
+        updatedField.setText(entry.getUpdatedAt() == null ? "" : String.valueOf(entry.getUpdatedAt()));
         translationField.setText(nullSafe(entry.getTranslationText()));
         correctedTextArea.setText(nullSafe(entry.getRawText()));
         correctedGlossArea.setText(nullSafe(entry.getGlossText()));
         approvedBox.setSelected(Boolean.TRUE.equals(entry.getIsCorrect()));
 
-        RawEntry rawEntry = entry.getRawEntry().getId() == null ? null : rawEntryService.getById(entry.getRawEntry().getId());
+        Long rawId = entry.getRawEntry() == null ? null : entry.getRawEntry().getId();
+        RawEntry rawEntry = rawId == null ? null : rawEntryService.getById(rawId);
+
         if (rawEntry != null) {
             rawTextArea.setText(nullSafe(rawEntry.getRawText()));
             rawGlossArea.setText(nullSafe(rawEntry.getGlossText()));
@@ -169,7 +175,15 @@ public class EntryEditorPanel extends JPanel {
         out.setIsCorrect(approvedBox.isSelected());
 
         String rawId = rawEntryIdField.getText().trim();
-        out.getRawEntry().setId(rawId.isBlank() ? null : Long.parseLong(rawId));
+        if (rawId.isBlank()) {
+            out.setRawEntry(null);
+        } else {
+            RawEntry linked = rawEntryService.getById(Long.parseLong(rawId));
+            if (linked == null) {
+                throw new IllegalArgumentException("Raw entry #" + rawId + " does not exist");
+            }
+            out.setRawEntry(linked);
+        }
 
         return out;
     }

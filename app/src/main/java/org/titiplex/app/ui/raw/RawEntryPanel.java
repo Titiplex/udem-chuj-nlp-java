@@ -115,10 +115,18 @@ public class RawEntryPanel extends JPanel {
     private void saveCurrentEntry() {
         try {
             RawEntry saved = rawEntryService.save(editorPanel.toEntry());
+
+            if (editorPanel.isAutoApplyRulesSelected()) {
+                autoCorrectionService.applyToRawEntry(saved);
+                statusConsumer.accept("Raw entry saved and rules applied: #" + saved.getId());
+                Dialogs.info(this, "Raw entry saved and rules applied.");
+            } else {
+                statusConsumer.accept("Raw entry saved: #" + saved.getId());
+                Dialogs.info(this, "Raw entry saved.");
+            }
+
             refresh();
             editorPanel.setEntry(saved);
-            Dialogs.info(this, "Raw entry saved.");
-            statusConsumer.accept("Raw entry saved: #" + saved.getId());
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to save raw entry", exception);
         }

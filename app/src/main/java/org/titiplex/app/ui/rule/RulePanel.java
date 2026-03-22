@@ -1,8 +1,10 @@
 package org.titiplex.app.ui.rule;
 
+import org.titiplex.app.domain.validation.ValidationRun;
 import org.titiplex.app.persistence.entity.Rule;
 import org.titiplex.app.service.RuleService;
 import org.titiplex.app.ui.common.Dialogs;
+import org.titiplex.app.ui.common.ValidationDialogs;
 
 import javax.swing.*;
 import java.awt.*;
@@ -27,6 +29,8 @@ public final class RulePanel extends JPanel {
 
         JButton newButton = new JButton("New");
         JButton importButton = new JButton("Import YAML");
+        JButton validateButton = new JButton("Validate");
+        JButton validateAllButton = new JButton("Validate all");
         JButton saveButton = new JButton("Save");
         JButton deleteButton = new JButton("Delete");
         JButton exportButton = new JButton("Export YAML");
@@ -34,6 +38,8 @@ public final class RulePanel extends JPanel {
 
         toolBar.add(newButton);
         toolBar.add(importButton);
+        toolBar.add(validateButton);
+        toolBar.add(validateAllButton);
         toolBar.add(saveButton);
         toolBar.add(deleteButton);
         toolBar.add(exportButton);
@@ -51,11 +57,13 @@ public final class RulePanel extends JPanel {
         });
 
         newButton.addActionListener(event -> createNewRule());
-        deleteButton.addActionListener(event -> deleteCurrentRule());
-        saveButton.addActionListener(event -> saveCurrentRule());
-        refreshButton.addActionListener(event -> refresh());
         importButton.addActionListener(event -> importYaml());
+        validateButton.addActionListener(event -> validateCurrentRule());
+        validateAllButton.addActionListener(event -> validateAllRules());
+        saveButton.addActionListener(event -> saveCurrentRule());
+        deleteButton.addActionListener(event -> deleteCurrentRule());
         exportButton.addActionListener(event -> exportYaml());
+        refreshButton.addActionListener(event -> refresh());
 
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
@@ -92,6 +100,26 @@ public final class RulePanel extends JPanel {
             Dialogs.info(this, "Rules exported.");
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to export YAML", exception);
+        }
+    }
+
+    private void validateCurrentRule() {
+        try {
+            ValidationRun run = ruleService.validate(editorPanel.toRule());
+            ValidationDialogs.showValidation(this, "Rule validation", run);
+            statusConsumer.accept(run.summary());
+        } catch (Exception exception) {
+            Dialogs.error(this, "Failed to validate rule", exception);
+        }
+    }
+
+    private void validateAllRules() {
+        try {
+            ValidationRun run = ruleService.validateAll();
+            ValidationDialogs.showValidation(this, "All rules validation", run);
+            statusConsumer.accept(run.summary());
+        } catch (Exception exception) {
+            Dialogs.error(this, "Failed to validate all rules", exception);
         }
     }
 

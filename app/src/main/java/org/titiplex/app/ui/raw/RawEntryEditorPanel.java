@@ -2,6 +2,7 @@ package org.titiplex.app.ui.raw;
 
 import org.titiplex.app.persistence.entity.RawEntry;
 import org.titiplex.app.ui.common.FormRow;
+import org.titiplex.app.ui.common.HelpIconButton;
 
 import javax.swing.*;
 import java.awt.*;
@@ -15,6 +16,8 @@ public class RawEntryEditorPanel extends JPanel {
     private final JTextArea rawTextArea = new JTextArea(8, 50);
     private final JTextArea rawGlossArea = new JTextArea(8, 50);
     private final JTextArea descriptionArea = new JTextArea(5, 50);
+
+    private final JCheckBox autoApplyRulesBox = new JCheckBox("Apply rules automatically after save", true);
 
     private RawEntry currentEntry;
 
@@ -38,7 +41,7 @@ public class RawEntryEditorPanel extends JPanel {
     }
 
     private JComponent buildMetaPanel() {
-        JPanel panel = new JPanel(new GridLayout(4, 1, 8, 8));
+        JPanel panel = new JPanel(new GridLayout(5, 1, 8, 8));
         panel.setBorder(BorderFactory.createTitledBorder("Raw entry metadata"));
 
         panel.add(FormRow.build(
@@ -66,6 +69,14 @@ public class RawEntryEditorPanel extends JPanel {
                 "Traduction libre de l'énoncé."
         ));
 
+        JPanel autoApplyRow = new JPanel(new BorderLayout(8, 0));
+        autoApplyRow.add(autoApplyRulesBox, BorderLayout.WEST);
+        autoApplyRow.add(new HelpIconButton(
+                "Automatic rule application",
+                "Si coché, la sauvegarde de cette raw entry relance immédiatement la correction."
+        ), BorderLayout.EAST);
+        panel.add(autoApplyRow);
+
         return panel;
     }
 
@@ -87,7 +98,7 @@ public class RawEntryEditorPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(6, 6));
         JPanel header = new JPanel(new BorderLayout());
         header.add(new JLabel(title), BorderLayout.WEST);
-        header.add(new org.titiplex.app.ui.common.HelpIconButton(helpTitle, helpText), BorderLayout.EAST);
+        header.add(new HelpIconButton(helpTitle, helpText), BorderLayout.EAST);
 
         panel.setBorder(BorderFactory.createTitledBorder(title));
         panel.add(header, BorderLayout.NORTH);
@@ -106,6 +117,7 @@ public class RawEntryEditorPanel extends JPanel {
             rawTextArea.setText("");
             rawGlossArea.setText("");
             descriptionArea.setText("");
+            autoApplyRulesBox.setSelected(true);
             return;
         }
 
@@ -125,6 +137,10 @@ public class RawEntryEditorPanel extends JPanel {
         out.setGlossText(rawGlossArea.getText());
         out.setDescription(descriptionArea.getText().trim());
         return out;
+    }
+
+    public boolean isAutoApplyRulesSelected() {
+        return autoApplyRulesBox.isSelected();
     }
 
     private static String nullToEmpty(String value) {

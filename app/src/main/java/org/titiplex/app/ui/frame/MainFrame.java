@@ -3,6 +3,7 @@ package org.titiplex.app.ui.frame;
 import org.springframework.stereotype.Component;
 import org.titiplex.app.service.*;
 import org.titiplex.app.ui.common.Dialogs;
+import org.titiplex.app.ui.conllu.ConlluPanel;
 import org.titiplex.app.ui.entry.EntryPanel;
 import org.titiplex.app.ui.raw.RawEntryPanel;
 import org.titiplex.app.ui.rule.RulePanel;
@@ -19,6 +20,7 @@ public class MainFrame extends JFrame {
     private final RulePanel rulePanel;
     private final EntryPanel entryPanel;
     private final RawEntryPanel rawEntryPanel;
+    private final ConlluPanel conlluPanel;
     private final DesktopExportService exportService;
 
     public MainFrame(
@@ -27,7 +29,9 @@ public class MainFrame extends JFrame {
             RawEntryService rawEntryService,
             CorpusImportService corpusImportService,
             AutoCorrectionService autoCorrectionService,
-            DesktopExportService exportService
+            DesktopExportService exportService,
+            AnnotationConfigStateService annotationConfigStateService,
+            ConlluPreviewService conlluPreviewService
     ) {
         super("Chuj NLP Studio");
 
@@ -47,11 +51,18 @@ public class MainFrame extends JFrame {
                 autoCorrectionService,
                 this::setStatus
         );
+        this.conlluPanel = new ConlluPanel(
+                correctedEntryService,
+                annotationConfigStateService,
+                conlluPreviewService,
+                this::setStatus
+        );
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Rules", rulePanel);
         tabs.addTab("Raw entries", rawEntryPanel);
         tabs.addTab("Corrected entries", entryPanel);
+        tabs.addTab("CoNLL-U", conlluPanel);
 
         add(tabs, BorderLayout.CENTER);
         add(buildStatusBar(), BorderLayout.SOUTH);
@@ -93,6 +104,7 @@ public class MainFrame extends JFrame {
             rulePanel.refresh();
             rawEntryPanel.refresh();
             entryPanel.refresh();
+            conlluPanel.refresh();
             setStatus("Data refreshed.");
         });
 
@@ -112,7 +124,7 @@ public class MainFrame extends JFrame {
         JMenu helpMenu = new JMenu("Help");
         JMenuItem aboutItem = new JMenuItem("About");
         aboutItem.addActionListener(event ->
-                Dialogs.info(this, "Chuj NLP Studio\nWave 1: rules, raw entries, corrected entries, imports and exports.")
+                Dialogs.info(this, "Chuj NLP Studio\nRules, raw entries, corrected entries, CoNLL-U preview/export.")
         );
         helpMenu.add(aboutItem);
 

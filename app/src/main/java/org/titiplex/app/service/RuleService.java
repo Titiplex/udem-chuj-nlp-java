@@ -49,6 +49,14 @@ public final class RuleService {
         ruleRepository.saveAll(rules);
     }
 
+    public ValidationRun validate(Rule rule) {
+        return validationService.validateRule(rule);
+    }
+
+    public ValidationRun validateAll() {
+        return validationService.validateAll();
+    }
+
     public void exportYaml(Path outputPath) {
         ValidationRun validation = validationService.validateAll();
         if (!validation.ok()) {
@@ -59,7 +67,15 @@ public final class RuleService {
 
     public int importYaml(Path path) {
         List<Rule> rules = exporter.readRules(path);
-        saveAll(rules);
+        for (Rule rule : rules) {
+            ValidationRun validation = validationService.validateRule(rule);
+            if (!validation.ok()) {
+                throw new IllegalStateException(
+                        "Invalid imported rule '" + rule.getStableId() + "': " + validation.summary()
+                );
+            }
+        }
+        ruleRepository.saveAll(rules);
         return rules.size();
     }
 }

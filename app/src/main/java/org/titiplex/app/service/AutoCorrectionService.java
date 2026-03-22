@@ -46,7 +46,7 @@ public class AutoCorrectionService {
                 ? new CorrectedEntry()
                 : correctedEntryRepository.findByRawEntryId(rawEntry.getId()).orElseGet(CorrectedEntry::new);
 
-        target.getRawEntry().setId(rawEntry.getId());
+        target.setRawEntry(rawEntry);
         target.setRawText(corrected.chujText());
         target.setGlossText(corrected.glossText());
         target.setTranslationText(corrected.translation());

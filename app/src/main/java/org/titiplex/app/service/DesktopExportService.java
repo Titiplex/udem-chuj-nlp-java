@@ -15,7 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -65,8 +64,15 @@ public class DesktopExportService {
                 chuj,
                 gloss,
                 translation,
-                new TokenAligner().align(Collections.singletonList(chuj), Collections.singletonList(gloss))
+                new TokenAligner().align(splitWords(chuj), splitWords(gloss))
         );
+    }
+
+    private static List<String> splitWords(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return List.of(value.trim().split("\\s+"));
     }
 
     private static String nullToEmpty(String value) {
