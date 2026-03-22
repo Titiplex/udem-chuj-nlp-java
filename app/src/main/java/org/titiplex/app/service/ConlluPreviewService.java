@@ -24,6 +24,14 @@ public class ConlluPreviewService {
         new ConlluWriter().writeEntry(output, toConlluEntry(entry, annotationConfig));
     }
 
+    public void exportAll(List<CorrectedEntry> entries, AnnotationConfig annotationConfig, Path output) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        for (CorrectedEntry entry : entries) {
+            sb.append(toConlluEntry(entry, annotationConfig).toConlluString()).append("\n");
+        }
+        new ConlluWriter().writeRaw(output, sb.toString());
+    }
+
     private ConlluEntry toConlluEntry(CorrectedEntry entry, AnnotationConfig annotationConfig) {
         String chuj = nullToEmpty(entry.getRawText());
         String gloss = nullToEmpty(entry.getGlossText());

@@ -122,6 +122,10 @@ public final class RuleEditorPanel extends JPanel {
         enabledBox.setSelected(rule.isEnabled());
     }
 
+    public void setYamlBody(String yamlBody) {
+        yamlArea.setText(yamlBody == null ? "" : yamlBody);
+    }
+
     public Rule toRule() {
         String stableId = new RuleId(ruleIdField.getText().trim()).toString();
         String name = nameField.getText().trim();

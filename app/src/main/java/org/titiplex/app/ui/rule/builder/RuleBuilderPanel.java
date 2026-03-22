@@ -11,78 +11,134 @@ import java.util.Map;
 public class RuleBuilderPanel extends JPanel {
     private final JTextField idField = new JTextField();
     private final JTextField nameField = new JTextField();
+
     private final JComboBox<String> typeBox = new JComboBox<>(new String[]{
-            "delete_chars",
             "rewrite_before_after",
             "regex_sub",
             "split_suffix",
-            "merge_sequence"
+            "delete_chars"
     });
 
-    private final JTextArea payloadArea = new JTextArea(12, 60);
-    private final JTextArea previewArea = new JTextArea(16, 60);
+    private final JTextField matchGlossField = new JTextField();
+    private final JTextField beforeField = new JTextField();
+    private final JTextField afterField = new JTextField();
+    private final JTextField regexPatternField = new JTextField();
+    private final JTextField regexReplacementField = new JTextField();
+    private final JTextField suffixesField = new JTextField();
+    private final JTextField deleteCharsField = new JTextField();
+
+    private final JTextArea previewArea = new JTextArea(18, 60);
 
     public RuleBuilderPanel() {
         setLayout(new BorderLayout(8, 8));
-        payloadArea.setBorder(BorderFactory.createTitledBorder("Rule parameters"));
-        previewArea.setBorder(BorderFactory.createTitledBorder("Generated YAML"));
+
         previewArea.setEditable(false);
+        previewArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+
+        JPanel form = new JPanel(new GridLayout(0, 2, 8, 8));
+        form.setBorder(BorderFactory.createTitledBorder("Guided rule builder"));
+
+        form.add(new JLabel("Rule id"));
+        form.add(idField);
+
+        form.add(new JLabel("Name"));
+        form.add(nameField);
+
+        form.add(new JLabel("Type"));
+        form.add(typeBox);
+
+        form.add(new JLabel("Match gloss (optional)"));
+        form.add(matchGlossField);
+
+        form.add(new JLabel("Before (comma-separated)"));
+        form.add(beforeField);
+
+        form.add(new JLabel("After (comma-separated)"));
+        form.add(afterField);
+
+        form.add(new JLabel("Regex pattern"));
+        form.add(regexPatternField);
+
+        form.add(new JLabel("Regex replacement"));
+        form.add(regexReplacementField);
+
+        form.add(new JLabel("Suffixes (comma-separated)"));
+        form.add(suffixesField);
+
+        form.add(new JLabel("Chars to delete (comma-separated)"));
+        form.add(deleteCharsField);
 
         JButton generateButton = new JButton("Generate YAML");
-        generateButton.addActionListener(e -> previewArea.setText(generateYaml()));
+        generateButton.addActionListener(event -> previewArea.setText(generateYaml()));
 
-        JPanel top = new JPanel(new GridLayout(4, 1, 6, 6));
-        top.add(labeled("Id", idField));
-        top.add(labeled("Name", nameField));
-        top.add(labeled("Type", typeBox));
-        top.add(generateButton);
-
-        add(top, BorderLayout.NORTH);
-        add(new JScrollPane(payloadArea), BorderLayout.CENTER);
+        add(form, BorderLayout.NORTH);
+        add(generateButton, BorderLayout.CENTER);
         add(new JScrollPane(previewArea), BorderLayout.SOUTH);
     }
 
-    private JPanel labeled(String label, JComponent field) {
-        JPanel p = new JPanel(new BorderLayout(6, 0));
-        p.add(new JLabel(label), BorderLayout.WEST);
-        p.add(field, BorderLayout.CENTER);
-        return p;
-    }
-
-    private String generateYaml() {
+    public String generateYaml() {
         String id = idField.getText().trim();
         String name = nameField.getText().trim();
         String type = (String) typeBox.getSelectedItem();
+
+        if (id.isBlank()) {
+            throw new IllegalArgumentException("Rule id cannot be blank");
+        }
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Rule name cannot be blank");
+        }
 
         Map<String, Object> rule = new LinkedHashMap<>();
         rule.put("id", id);
         rule.put("name", name);
 
+        if (!matchGlossField.getText().trim().isBlank()) {
+            Map<String, Object> match = new LinkedHashMap<>();
+            match.put("gloss", matchGlossField.getText().trim());
+            rule.put("match", match);
+        }
+
         Map<String, Object> rewrite = new LinkedHashMap<>();
 
         switch (type) {
+            case "rewrite_before_after" -> {
+                rewrite.put("before", csv(beforeField.getText()));
+                rewrite.put("after", csv(afterField.getText()));
+            }
+            case "regex_sub" -> {
+                Map<String, Object> regexSub = new LinkedHashMap<>();
+                regexSub.put("scope", "chuj");
+                regexSub.put("pattern", regexPatternField.getText().trim());
+                regexSub.put("repl", regexReplacementField.getText().trim());
+                rewrite.put("regex_sub", regexSub);
+            }
+            case "split_suffix" -> {
+                Map<String, Object> split = new LinkedHashMap<>();
+                split.put("type", "suffix");
+                split.put("suffixes", csv(suffixesField.getText()));
+                rewrite.put("split", split);
+            }
             case "delete_chars" -> {
                 Map<String, Object> delete = new LinkedHashMap<>();
                 delete.put("type", "chars");
-                delete.put("chars", List.of(payloadArea.getText().trim().split("\\s*,\\s*")));
+                delete.put("chars", csv(deleteCharsField.getText()));
                 rewrite.put("delete", delete);
             }
-            case "regex_sub" -> {
-                Map<String, Object> regex = new LinkedHashMap<>();
-                regex.put("scope", "chuj");
-                regex.put("pattern", payloadArea.getText().trim());
-                regex.put("repl", "");
-                rewrite.put("regex_sub", regex);
-            }
+            default -> throw new IllegalStateException("Unsupported builder type: " + type);
         }
 
-        if (!rewrite.isEmpty()) {
-            rule.put("rewrite", rewrite);
-        }
+        rule.put("rewrite", rewrite);
 
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("rules", List.of(rule));
 
         return new Yaml().dump(root);
+    }
+
+    private List<String> csv(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        return List.of(text.trim().split("\\s*,\\s*"));
     }
 }

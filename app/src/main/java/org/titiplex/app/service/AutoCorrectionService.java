@@ -28,6 +28,14 @@ public class AutoCorrectionService {
     }
 
     public CorrectedEntry applyToRawEntry(RawEntry rawEntry) {
+        CorrectedEntry existing = rawEntry.getId() == null
+                ? null
+                : correctedEntryRepository.findByRawEntryId(rawEntry.getId()).orElse(null);
+
+        if (existing != null && Boolean.TRUE.equals(existing.getIsCorrect())) {
+            return existing;
+        }
+
         RuleEngine engine = pipelineFactory.createRuleEngine();
         CorrectionPipeline pipeline = new CorrectionPipeline(new TokenAligner(), engine);
 
@@ -42,15 +50,14 @@ public class AutoCorrectionService {
 
         CorrectedBlock corrected = pipeline.process(rawBlock);
 
-        CorrectedEntry target = rawEntry.getId() == null
-                ? new CorrectedEntry()
-                : correctedEntryRepository.findByRawEntryId(rawEntry.getId()).orElseGet(CorrectedEntry::new);
+        CorrectedEntry target = existing != null ? existing : new CorrectedEntry();
 
         target.setRawEntry(rawEntry);
         target.setRawText(corrected.chujText());
         target.setGlossText(corrected.glossText());
         target.setTranslationText(corrected.translation());
         target.setDescription("Generated from raw entry #" + rawEntry.getId());
+
         if (target.getIsCorrect() == null) {
             target.setIsCorrect(false);
         }

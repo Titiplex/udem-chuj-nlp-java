@@ -8,7 +8,7 @@ import org.titiplex.app.ui.common.Dialogs;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
+import java.nio.file.Path;
 import java.util.function.Consumer;
 
 public class RawEntryPanel extends JPanel {
@@ -38,7 +38,6 @@ public class RawEntryPanel extends JPanel {
         toolBar.setFloatable(false);
 
         JButton newButton = new JButton("New");
-        JButton importButton = new JButton("Import DOCX/TXT");
         JButton saveButton = new JButton("Save");
         JButton applyButton = new JButton("Apply rules");
         JButton applyAllButton = new JButton("Apply rules to all");
@@ -46,7 +45,6 @@ public class RawEntryPanel extends JPanel {
         JButton refreshButton = new JButton("Refresh");
 
         toolBar.add(newButton);
-        toolBar.add(importButton);
         toolBar.add(saveButton);
         toolBar.add(applyButton);
         toolBar.add(applyAllButton);
@@ -65,7 +63,6 @@ public class RawEntryPanel extends JPanel {
         });
 
         newButton.addActionListener(event -> createNewEntry());
-        importButton.addActionListener(event -> importFile());
         saveButton.addActionListener(event -> saveCurrentEntry());
         applyButton.addActionListener(event -> applyRulesToCurrent());
         applyAllButton.addActionListener(event -> applyRulesToAll());
@@ -94,16 +91,9 @@ public class RawEntryPanel extends JPanel {
         statusConsumer.accept(tableModel.getRowCount() + " raw entrie(s) loaded.");
     }
 
-    private void importFile() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setSelectedFile(new File("corpus.docx"));
-        int result = chooser.showOpenDialog(this);
-        if (result != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
+    public void importFile(Path path) {
         try {
-            int count = corpusImportService.importFile(chooser.getSelectedFile().toPath());
+            int count = corpusImportService.importFile(path);
             refresh();
             Dialogs.info(this, "Imported " + count + " raw entrie(s).");
             statusConsumer.accept("Imported " + count + " raw entrie(s).");
@@ -138,9 +128,17 @@ public class RawEntryPanel extends JPanel {
             if (entry.getId() == null) {
                 entry = rawEntryService.save(entry);
             }
-            autoCorrectionService.applyToRawEntry(entry);
-            Dialogs.info(this, "Rules applied to raw entry #" + entry.getId() + ".");
-            statusConsumer.accept("Rules applied to raw entry #" + entry.getId());
+            boolean approvedBefore = entry.getId() != null
+                    && rawEntryService.getById(entry.getId()) != null;
+            var corrected = autoCorrectionService.applyToRawEntry(entry);
+
+            if (Boolean.TRUE.equals(corrected.getIsCorrect())) {
+                Dialogs.info(this, "Linked corrected entry is approved, so it was not overwritten.");
+                statusConsumer.accept("Approved corrected entry preserved.");
+            } else {
+                Dialogs.info(this, "Rules applied to raw entry #" + entry.getId() + ".");
+                statusConsumer.accept("Rules applied to raw entry #" + entry.getId());
+            }
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to apply rules", exception);
         }
@@ -149,7 +147,7 @@ public class RawEntryPanel extends JPanel {
     private void applyRulesToAll() {
         try {
             int count = autoCorrectionService.applyToAll(rawEntryService.getAll());
-            Dialogs.info(this, "Rules applied to " + count + " raw entrie(s).");
+            Dialogs.info(this, "Rules applied to " + count + " raw entrie(s). Approved entries were preserved.");
             statusConsumer.accept("Rules applied to " + count + " raw entrie(s).");
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to apply rules to all raw entries", exception);

@@ -20,6 +20,10 @@ public class ConlluEntrySelectionTableModel extends AbstractTableModel {
         return entries.get(row);
     }
 
+    public List<CorrectedEntry> getEntries() {
+        return List.copyOf(entries);
+    }
+
     @Override
     public int getRowCount() {
         return entries.size();

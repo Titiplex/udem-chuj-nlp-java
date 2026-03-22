@@ -6,10 +6,11 @@ import org.titiplex.app.service.RawEntryService;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 public class EntryEditorPanel extends JPanel {
     private final JTextField idField = new JTextField();
-    private final JTextField rawEntryIdField = new JTextField();
+    private final JComboBox<RawEntryRef> rawEntryComboBox = new JComboBox<>();
     private final JTextField createdField = new JTextField();
     private final JTextField updatedField = new JTextField();
     private final JTextField translationField = new JTextField();
@@ -21,7 +22,6 @@ public class EntryEditorPanel extends JPanel {
     private final JTextArea rawGlossArea = new JTextArea(4, 40);
 
     private final JTextArea descriptionArea = new JTextArea(5, 80);
-
     private final JCheckBox approvedBox = new JCheckBox("Approved", false);
 
     private CorrectedEntry entry;
@@ -50,9 +50,13 @@ public class EntryEditorPanel extends JPanel {
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
 
+        rawEntryComboBox.addActionListener(event -> refreshLinkedRawPreview());
+
         add(buildMetaPanel(), BorderLayout.NORTH);
         add(buildCenterPanel(), BorderLayout.CENTER);
         add(buildBottomPanel(), BorderLayout.SOUTH);
+
+        reloadRawEntryChoices();
     }
 
     private JComponent buildMetaPanel() {
@@ -62,8 +66,8 @@ public class EntryEditorPanel extends JPanel {
         meta.add(new JLabel("ID"));
         meta.add(idField);
 
-        meta.add(new JLabel("Raw entry ID"));
-        meta.add(rawEntryIdField);
+        meta.add(new JLabel("Linked raw entry"));
+        meta.add(rawEntryComboBox);
 
         meta.add(new JLabel("Created"));
         meta.add(createdField);
@@ -122,10 +126,11 @@ public class EntryEditorPanel extends JPanel {
 
     public void setEntry(CorrectedEntry entry) {
         this.entry = entry;
+        reloadRawEntryChoices();
 
         if (entry == null) {
             idField.setText("");
-            rawEntryIdField.setText("");
+            rawEntryComboBox.setSelectedIndex(-1);
             createdField.setText("");
             updatedField.setText("");
             translationField.setText("");
@@ -139,30 +144,17 @@ public class EntryEditorPanel extends JPanel {
         }
 
         idField.setText(entry.getId() == null ? "" : String.valueOf(entry.getId()));
-        rawEntryIdField.setText(
-                entry.getRawEntry() == null || entry.getRawEntry().getId() == null
-                        ? ""
-                        : String.valueOf(entry.getRawEntry().getId())
-        );
         createdField.setText(entry.getCreatedAt() == null ? "" : String.valueOf(entry.getCreatedAt()));
         updatedField.setText(entry.getUpdatedAt() == null ? "" : String.valueOf(entry.getUpdatedAt()));
         translationField.setText(nullSafe(entry.getTranslationText()));
         correctedTextArea.setText(nullSafe(entry.getRawText()));
         correctedGlossArea.setText(nullSafe(entry.getGlossText()));
         approvedBox.setSelected(Boolean.TRUE.equals(entry.getIsCorrect()));
-
-        Long rawId = entry.getRawEntry() == null ? null : entry.getRawEntry().getId();
-        RawEntry rawEntry = rawId == null ? null : rawEntryService.getById(rawId);
-
-        if (rawEntry != null) {
-            rawTextArea.setText(nullSafe(rawEntry.getRawText()));
-            rawGlossArea.setText(nullSafe(rawEntry.getGlossText()));
-        } else {
-            rawTextArea.setText("");
-            rawGlossArea.setText("");
-        }
-
         descriptionArea.setText(nullSafe(entry.getDescription()));
+
+        Long linkedRawId = entry.getRawEntry() == null ? null : entry.getRawEntry().getId();
+        selectRawEntry(linkedRawId);
+        refreshLinkedRawPreview();
     }
 
     public CorrectedEntry toEntry() {
@@ -174,18 +166,82 @@ public class EntryEditorPanel extends JPanel {
         out.setDescription(descriptionArea.getText().trim());
         out.setIsCorrect(approvedBox.isSelected());
 
-        String rawId = rawEntryIdField.getText().trim();
-        if (rawId.isBlank()) {
+        RawEntryRef selected = (RawEntryRef) rawEntryComboBox.getSelectedItem();
+        if (selected == null || selected.id() == null) {
             out.setRawEntry(null);
         } else {
-            RawEntry linked = rawEntryService.getById(Long.parseLong(rawId));
+            RawEntry linked = rawEntryService.getById(selected.id());
             if (linked == null) {
-                throw new IllegalArgumentException("Raw entry #" + rawId + " does not exist");
+                throw new IllegalArgumentException("Raw entry #" + selected.id() + " does not exist");
             }
             out.setRawEntry(linked);
         }
 
         return out;
+    }
+
+    public void reloadRawEntryChoices() {
+        List<RawEntry> rawEntries = rawEntryService.getAll();
+        DefaultComboBoxModel<RawEntryRef> model = new DefaultComboBoxModel<>();
+
+        model.addElement(new RawEntryRef(null, "(none)"));
+        for (RawEntry raw : rawEntries) {
+            model.addElement(new RawEntryRef(
+                    raw.getId(),
+                    buildLabel(raw)
+            ));
+        }
+
+        rawEntryComboBox.setModel(model);
+    }
+
+    private void selectRawEntry(Long rawEntryId) {
+        ComboBoxModel<RawEntryRef> model = rawEntryComboBox.getModel();
+        if (rawEntryId == null) {
+            rawEntryComboBox.setSelectedIndex(0);
+            return;
+        }
+
+        for (int i = 0; i < model.getSize(); i++) {
+            RawEntryRef item = model.getElementAt(i);
+            if (rawEntryId.equals(item.id())) {
+                rawEntryComboBox.setSelectedIndex(i);
+                return;
+            }
+        }
+
+        rawEntryComboBox.setSelectedIndex(0);
+    }
+
+    private void refreshLinkedRawPreview() {
+        RawEntryRef selected = (RawEntryRef) rawEntryComboBox.getSelectedItem();
+        if (selected == null || selected.id() == null) {
+            rawTextArea.setText("");
+            rawGlossArea.setText("");
+            return;
+        }
+
+        RawEntry raw = rawEntryService.getById(selected.id());
+        if (raw == null) {
+            rawTextArea.setText("");
+            rawGlossArea.setText("");
+            return;
+        }
+
+        rawTextArea.setText(nullSafe(raw.getRawText()));
+        rawGlossArea.setText(nullSafe(raw.getGlossText()));
+    }
+
+    private String buildLabel(RawEntry raw) {
+        String preview = nullSafe(raw.getTranslationText());
+        if (preview.isBlank()) {
+            preview = nullSafe(raw.getRawText());
+        }
+        preview = preview.replace('\n', ' ').trim();
+        if (preview.length() > 50) {
+            preview = preview.substring(0, 47) + "...";
+        }
+        return "#" + raw.getId() + " — " + preview;
     }
 
     private static String nullSafe(String value) {

@@ -5,15 +5,17 @@ import org.titiplex.app.persistence.entity.Rule;
 import org.titiplex.app.service.RuleService;
 import org.titiplex.app.ui.common.Dialogs;
 import org.titiplex.app.ui.common.ValidationDialogs;
+import org.titiplex.app.ui.rule.builder.RuleBuilderPanel;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
+import java.nio.file.Path;
 import java.util.function.Consumer;
 
 public final class RulePanel extends JPanel {
     private final RuleTableModel tableModel = new RuleTableModel();
     private final RuleEditorPanel editorPanel = new RuleEditorPanel();
+    private final RuleBuilderPanel builderPanel = new RuleBuilderPanel();
     private final JTable table = new JTable(tableModel);
     private final RuleService ruleService;
     private final Consumer<String> statusConsumer;
@@ -28,21 +30,19 @@ public final class RulePanel extends JPanel {
         toolBar.setFloatable(false);
 
         JButton newButton = new JButton("New");
-        JButton importButton = new JButton("Import YAML");
         JButton validateButton = new JButton("Validate");
         JButton validateAllButton = new JButton("Validate all");
         JButton saveButton = new JButton("Save");
         JButton deleteButton = new JButton("Delete");
-        JButton exportButton = new JButton("Export YAML");
+        JButton loadBuilderButton = new JButton("Load builder YAML");
         JButton refreshButton = new JButton("Refresh");
 
         toolBar.add(newButton);
-        toolBar.add(importButton);
         toolBar.add(validateButton);
         toolBar.add(validateAllButton);
         toolBar.add(saveButton);
         toolBar.add(deleteButton);
-        toolBar.add(exportButton);
+        toolBar.add(loadBuilderButton);
         toolBar.add(refreshButton);
 
         add(toolBar, BorderLayout.NORTH);
@@ -57,18 +57,21 @@ public final class RulePanel extends JPanel {
         });
 
         newButton.addActionListener(event -> createNewRule());
-        importButton.addActionListener(event -> importYaml());
         validateButton.addActionListener(event -> validateCurrentRule());
         validateAllButton.addActionListener(event -> validateAllRules());
         saveButton.addActionListener(event -> saveCurrentRule());
         deleteButton.addActionListener(event -> deleteCurrentRule());
-        exportButton.addActionListener(event -> exportYaml());
+        loadBuilderButton.addActionListener(event -> loadBuilderYamlIntoEditor());
         refreshButton.addActionListener(event -> refresh());
+
+        JTabbedPane rightTabs = new JTabbedPane();
+        rightTabs.addTab("YAML editor", editorPanel);
+        rightTabs.addTab("Guided builder", builderPanel);
 
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
                 new JScrollPane(table),
-                editorPanel
+                rightTabs
         );
         splitPane.setResizeWeight(0.35);
 
@@ -86,20 +89,33 @@ public final class RulePanel extends JPanel {
         statusConsumer.accept(tableModel.getRowCount() + " rule(s) loaded.");
     }
 
-    public void exportYaml() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setSelectedFile(new File("rules-export.yaml"));
-        int result = chooser.showSaveDialog(this);
-        if (result != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
+    public void importYaml(Path path) {
         try {
-            ruleService.exportYaml(chooser.getSelectedFile().toPath());
-            statusConsumer.accept("Rules exported to " + chooser.getSelectedFile().getName());
+            int count = ruleService.importYaml(path);
+            refresh();
+            statusConsumer.accept("Imported " + count + " rule(s).");
+            Dialogs.info(this, "Imported " + count + " rule(s).");
+        } catch (Exception exception) {
+            Dialogs.error(this, "Failed to import YAML", exception);
+        }
+    }
+
+    public void exportYaml(Path path) {
+        try {
+            ruleService.exportYaml(path);
+            statusConsumer.accept("Rules exported to " + path.getFileName());
             Dialogs.info(this, "Rules exported.");
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to export YAML", exception);
+        }
+    }
+
+    private void loadBuilderYamlIntoEditor() {
+        try {
+            editorPanel.setYamlBody(builderPanel.generateYaml());
+            statusConsumer.accept("Builder YAML loaded into editor.");
+        } catch (Exception exception) {
+            Dialogs.error(this, "Failed to generate YAML from builder", exception);
         }
     }
 
@@ -152,23 +168,6 @@ public final class RulePanel extends JPanel {
             Dialogs.info(this, "Rule saved.");
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to save rule", exception);
-        }
-    }
-
-    private void importYaml() {
-        JFileChooser chooser = new JFileChooser();
-        int result = chooser.showOpenDialog(this);
-        if (result != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        try {
-            int count = ruleService.importYaml(chooser.getSelectedFile().toPath());
-            refresh();
-            statusConsumer.accept("Imported " + count + " rule(s).");
-            Dialogs.info(this, "Imported " + count + " rule(s).");
-        } catch (Exception exception) {
-            Dialogs.error(this, "Failed to import YAML", exception);
         }
     }
 }

@@ -1,7 +1,14 @@
 package org.titiplex.app.ui.frame;
 
 import org.springframework.stereotype.Component;
-import org.titiplex.app.service.*;
+import org.titiplex.app.service.AnnotationConfigStateService;
+import org.titiplex.app.service.AutoCorrectionService;
+import org.titiplex.app.service.ConlluPreviewService;
+import org.titiplex.app.service.CorpusImportService;
+import org.titiplex.app.service.CorrectedEntryService;
+import org.titiplex.app.service.DesktopExportService;
+import org.titiplex.app.service.RawEntryService;
+import org.titiplex.app.service.RuleService;
 import org.titiplex.app.ui.common.Dialogs;
 import org.titiplex.app.ui.conllu.ConlluPanel;
 import org.titiplex.app.ui.entry.EntryPanel;
@@ -81,6 +88,24 @@ public class MainFrame extends JFrame {
 
         JMenu fileMenu = new JMenu("File");
 
+        JMenuItem importCorpusItem = new JMenuItem("Import corpus DOCX/TXT");
+        importCorpusItem.addActionListener(event -> importCorpus());
+
+        JMenuItem importRulesItem = new JMenuItem("Import rules YAML");
+        importRulesItem.addActionListener(event -> importRulesYaml());
+
+        JMenuItem exportRulesItem = new JMenuItem("Export rules YAML");
+        exportRulesItem.addActionListener(event -> exportRulesYaml());
+
+        JMenuItem exportDocxItem = new JMenuItem("Export corrected DOCX");
+        exportDocxItem.addActionListener(event -> exportCorrectedDocx());
+
+        JMenuItem exportStatsItem = new JMenuItem("Export stats TXT");
+        exportStatsItem.addActionListener(event -> exportStats());
+
+        JMenuItem exportConlluItem = new JMenuItem("Export corpus CoNLL-U");
+        exportConlluItem.addActionListener(event -> exportCorpusConllu());
+
         JMenuItem newRuleItem = new JMenuItem("New rule");
         newRuleItem.addActionListener(event -> {
             rulePanel.createNewRule();
@@ -92,12 +117,6 @@ public class MainFrame extends JFrame {
             rawEntryPanel.createNewEntry();
             setStatus("New raw entry editor opened.");
         });
-
-        JMenuItem exportDocxItem = new JMenuItem("Export corrected DOCX");
-        exportDocxItem.addActionListener(event -> exportCorrectedDocx());
-
-        JMenuItem exportStatsItem = new JMenuItem("Export stats TXT");
-        exportStatsItem.addActionListener(event -> exportStats());
 
         JMenuItem refreshItem = new JMenuItem("Refresh all");
         refreshItem.addActionListener(event -> {
@@ -111,11 +130,16 @@ public class MainFrame extends JFrame {
         JMenuItem quitItem = new JMenuItem("Quit");
         quitItem.addActionListener(event -> dispose());
 
-        fileMenu.add(newRuleItem);
-        fileMenu.add(newRawEntryItem);
+        fileMenu.add(importCorpusItem);
+        fileMenu.add(importRulesItem);
         fileMenu.addSeparator();
+        fileMenu.add(exportRulesItem);
         fileMenu.add(exportDocxItem);
         fileMenu.add(exportStatsItem);
+        fileMenu.add(exportConlluItem);
+        fileMenu.addSeparator();
+        fileMenu.add(newRuleItem);
+        fileMenu.add(newRawEntryItem);
         fileMenu.addSeparator();
         fileMenu.add(refreshItem);
         fileMenu.addSeparator();
@@ -131,6 +155,33 @@ public class MainFrame extends JFrame {
         menuBar.add(fileMenu);
         menuBar.add(helpMenu);
         return menuBar;
+    }
+
+    private void importCorpus() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setSelectedFile(new File("corpus.docx"));
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        rawEntryPanel.importFile(chooser.getSelectedFile().toPath());
+    }
+
+    private void importRulesYaml() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setSelectedFile(new File("rules.yaml"));
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        rulePanel.importYaml(chooser.getSelectedFile().toPath());
+    }
+
+    private void exportRulesYaml() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setSelectedFile(new File("rules-export.yaml"));
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        rulePanel.exportYaml(chooser.getSelectedFile().toPath());
     }
 
     private void exportCorrectedDocx() {
@@ -163,6 +214,10 @@ public class MainFrame extends JFrame {
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to export stats", exception);
         }
+    }
+
+    private void exportCorpusConllu() {
+        conlluPanel.exportAllFromMenu();
     }
 
     private void setStatus(String status) {

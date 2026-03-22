@@ -45,12 +45,14 @@ public class ConlluPanel extends JPanel {
         JButton resetConfigButton = new JButton("Reset config");
         JButton previewButton = new JButton("Preview");
         JButton exportButton = new JButton("Export selected .conllu");
+        JButton exportAllButton = new JButton("Export all .conllu");
         JButton refreshButton = new JButton("Refresh");
 
         toolBar.add(loadConfigButton);
         toolBar.add(resetConfigButton);
         toolBar.add(previewButton);
         toolBar.add(exportButton);
+        toolBar.add(exportAllButton);
         toolBar.add(refreshButton);
 
         add(toolBar, BorderLayout.NORTH);
@@ -68,6 +70,7 @@ public class ConlluPanel extends JPanel {
         resetConfigButton.addActionListener(event -> resetAnnotationConfig());
         previewButton.addActionListener(event -> previewSelectedEntry());
         exportButton.addActionListener(event -> exportSelectedEntry());
+        exportAllButton.addActionListener(event -> exportAllEntries());
         refreshButton.addActionListener(event -> refresh());
 
         JSplitPane splitPane = new JSplitPane(
@@ -86,6 +89,10 @@ public class ConlluPanel extends JPanel {
     public void refresh() {
         tableModel.setEntries(correctedEntryService.getAll());
         statusConsumer.accept(tableModel.getRowCount() + " corrected entrie(s) available for CoNLL-U.");
+    }
+
+    public void exportAllFromMenu() {
+        exportAllEntries();
     }
 
     private void loadAnnotationConfig() {
@@ -162,11 +169,31 @@ public class ConlluPanel extends JPanel {
         }
     }
 
+    private void exportAllEntries() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setSelectedFile(new File("corpus.conllu"));
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        try {
+            conlluPreviewService.exportAll(
+                    tableModel.getEntries(),
+                    annotationConfigStateService.getCurrentConfig(),
+                    chooser.getSelectedFile().toPath()
+            );
+            statusConsumer.accept("Batch CoNLL-U exported.");
+            Dialogs.info(this, "Batch CoNLL-U exported.");
+        } catch (Exception exception) {
+            Dialogs.error(this, "Failed to export all CoNLL-U entries", exception);
+        }
+    }
+
     private void updateConfigStatus() {
         if (annotationConfigStateService.getCurrentPath() == null) {
             configStatusLabel.setText("Annotation config: default empty config");
         } else {
-            configStatusLabel.setText("Annotation config: " + annotationConfigStateService.getCurrentPath().toString());
+            configStatusLabel.setText("Annotation config: " + annotationConfigStateService.getCurrentPath());
         }
     }
 }
