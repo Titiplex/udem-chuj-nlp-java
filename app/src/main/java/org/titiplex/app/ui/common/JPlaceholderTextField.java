@@ -2,37 +2,47 @@ package org.titiplex.app.ui.common;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 
 public final class JPlaceholderTextField extends JTextField {
+    private String placeholder;
+
     public JPlaceholderTextField() {
         super();
-        this.setForeground(Color.GRAY);
     }
 
     public JPlaceholderTextField(String placeholder) {
         super();
-        this.setForeground(Color.GRAY);
-        this.setPlaceholder(placeholder);
+        this.placeholder = placeholder;
     }
 
     public void setPlaceholder(String placeholder) {
-        this.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (getText().equals(placeholder)) {
-                    setText("");
-                    setForeground(Color.BLACK);
-                }
-            }
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (getText().isEmpty()) {
-                    setForeground(Color.GRAY);
-                    setText(placeholder);
-                }
-            }
-        });
+        this.placeholder = placeholder;
+        repaint();
+    }
+
+    public String getPlaceholder() {
+        return placeholder;
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        if (placeholder == null || placeholder.isBlank() || !getText().isEmpty() || isFocusOwner()) {
+            return;
+        }
+
+        Graphics2D g2 = (Graphics2D) g.create();
+        try {
+            g2.setColor(UIManager.getColor("TextField.placeholderForeground") != null
+                    ? UIManager.getColor("TextField.placeholderForeground")
+                    : Color.GRAY);
+            Insets insets = getInsets();
+            FontMetrics fm = g2.getFontMetrics();
+            int y = insets.top + fm.getAscent() + 1;
+            g2.drawString(placeholder, insets.left + 2, y);
+        } finally {
+            g2.dispose();
+        }
     }
 }

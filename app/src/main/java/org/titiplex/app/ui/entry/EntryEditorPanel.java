@@ -9,6 +9,7 @@ import java.awt.*;
 
 public class EntryEditorPanel extends JPanel {
     private final JTextField idField = new JTextField();
+    private final JTextField rawEntryIdField = new JTextField();
     private final JTextField createdField = new JTextField();
     private final JTextField updatedField = new JTextField();
     private final JTextField translationField = new JTextField();
@@ -35,18 +36,17 @@ public class EntryEditorPanel extends JPanel {
         createdField.setEditable(false);
         updatedField.setEditable(false);
 
+        rawTextArea.setEditable(false);
+        rawGlossArea.setEditable(false);
+
         correctedTextArea.setLineWrap(true);
         correctedTextArea.setWrapStyleWord(true);
-
         correctedGlossArea.setLineWrap(true);
         correctedGlossArea.setWrapStyleWord(true);
-
         rawTextArea.setLineWrap(true);
         rawTextArea.setWrapStyleWord(true);
-
         rawGlossArea.setLineWrap(true);
         rawGlossArea.setWrapStyleWord(true);
-
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
 
@@ -56,16 +56,21 @@ public class EntryEditorPanel extends JPanel {
     }
 
     private JComponent buildMetaPanel() {
-        JPanel meta = new JPanel(new GridLayout(5, 2, 8, 8));
+        JPanel meta = new JPanel(new GridLayout(6, 2, 8, 8));
         meta.setBorder(BorderFactory.createTitledBorder("Metadata"));
 
         meta.add(new JLabel("ID"));
         meta.add(idField);
+
+        meta.add(new JLabel("Raw entry ID"));
+        meta.add(rawEntryIdField);
+
         meta.add(new JLabel("Created"));
         meta.add(createdField);
 
         meta.add(new JLabel("Updated"));
         meta.add(updatedField);
+
         meta.add(new JLabel("Translation"));
         meta.add(translationField);
 
@@ -85,11 +90,11 @@ public class EntryEditorPanel extends JPanel {
         correctedPanel.add(correctedInner, BorderLayout.CENTER);
 
         JPanel rawPanel = new JPanel(new BorderLayout(8, 8));
-        rawPanel.setBorder(BorderFactory.createTitledBorder("Raw"));
+        rawPanel.setBorder(BorderFactory.createTitledBorder("Linked raw entry"));
 
         JPanel rawInner = new JPanel(new GridLayout(2, 1, 8, 8));
-        rawInner.add(wrap("Text", rawTextArea));
-        rawInner.add(wrap("Gloss", rawGlossArea));
+        rawInner.add(wrap("Raw text", rawTextArea));
+        rawInner.add(wrap("Raw gloss", rawGlossArea));
         rawPanel.add(rawInner, BorderLayout.CENTER);
 
         JSplitPane splitPane = new JSplitPane(
@@ -120,6 +125,7 @@ public class EntryEditorPanel extends JPanel {
 
         if (entry == null) {
             idField.setText("");
+            rawEntryIdField.setText("");
             createdField.setText("");
             updatedField.setText("");
             translationField.setText("");
@@ -133,24 +139,42 @@ public class EntryEditorPanel extends JPanel {
         }
 
         idField.setText(String.valueOf(entry.getId()));
+        rawEntryIdField.setText(entry.getRawEntry().getId() == null ? "" : String.valueOf(entry.getRawEntry().getId()));
         createdField.setText(String.valueOf(entry.getCreatedAt()));
         updatedField.setText(String.valueOf(entry.getUpdatedAt()));
-        translationField.setText(entry.getTranslationText());
+        translationField.setText(nullSafe(entry.getTranslationText()));
+        correctedTextArea.setText(nullSafe(entry.getRawText()));
+        correctedGlossArea.setText(nullSafe(entry.getGlossText()));
+        approvedBox.setSelected(Boolean.TRUE.equals(entry.getIsCorrect()));
 
-        correctedTextArea.setText(entry.getRawText());
-        correctedGlossArea.setText(entry.getGlossText());
-
-        approvedBox.setSelected(entry.getIsCorrect());
-
-        RawEntry rawEntry = rawEntryService.getById(entry.getRawEntryId());
+        RawEntry rawEntry = entry.getRawEntry().getId() == null ? null : rawEntryService.getById(entry.getRawEntry().getId());
         if (rawEntry != null) {
-            rawTextArea.setText(rawEntry.getRawText());
-            rawGlossArea.setText(rawEntry.getGlossText());
+            rawTextArea.setText(nullSafe(rawEntry.getRawText()));
+            rawGlossArea.setText(nullSafe(rawEntry.getGlossText()));
         } else {
             rawTextArea.setText("");
             rawGlossArea.setText("");
         }
 
-        descriptionArea.setText(entry.getDescription());
+        descriptionArea.setText(nullSafe(entry.getDescription()));
+    }
+
+    public CorrectedEntry toEntry() {
+        CorrectedEntry out = entry == null ? new CorrectedEntry() : entry;
+
+        out.setTranslationText(translationField.getText().trim());
+        out.setRawText(correctedTextArea.getText());
+        out.setGlossText(correctedGlossArea.getText());
+        out.setDescription(descriptionArea.getText().trim());
+        out.setIsCorrect(approvedBox.isSelected());
+
+        String rawId = rawEntryIdField.getText().trim();
+        out.getRawEntry().setId(rawId.isBlank() ? null : Long.parseLong(rawId));
+
+        return out;
+    }
+
+    private static String nullSafe(String value) {
+        return value == null ? "" : value;
     }
 }

@@ -8,10 +8,14 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public final class YamlEI {
     private final Yaml yaml = new Yaml();
@@ -19,22 +23,24 @@ public final class YamlEI {
     @SuppressWarnings("unchecked")
     public void writeRules(List<Rule> rules, Path outputPath) {
         List<Map<String, Object>> exportedRules = new ArrayList<>();
+
         for (Rule rule : rules) {
             Map<String, Object> root = yaml.load(rule.getYamlBody());
             if (root == null) {
                 continue;
             }
-            List<Map<String, Object>> rawRules = (List<Map<String, Object>>) root.getOrDefault("rules", List.of());
-            if (!rawRules.isEmpty()) {
-                exportedRules.add(rawRules.getFirst());
-            }
+
+            List<Map<String, Object>> rawRules =
+                    (List<Map<String, Object>>) root.getOrDefault("rules", List.of());
+
+            exportedRules.addAll(rawRules);
         }
 
-        Map<String, Object> output = new HashMap<>();
+        Map<String, Object> output = new LinkedHashMap<>();
         output.put("rules", exportedRules);
 
         try (OutputStream stream = Files.newOutputStream(outputPath)) {
-            stream.write(yaml.dump(output).getBytes());
+            stream.write(yaml.dump(output).getBytes(StandardCharsets.UTF_8));
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to export rules to YAML", exception);
         }
@@ -48,7 +54,8 @@ public final class YamlEI {
                 return List.of();
             }
 
-            List<Map<String, Object>> rules = (List<Map<String, Object>>) root.getOrDefault("rules", List.of());
+            List<Map<String, Object>> rules =
+                    (List<Map<String, Object>>) root.getOrDefault("rules", List.of());
             List<Rule> out = new ArrayList<>();
 
             for (Map<String, Object> rawRule : rules) {

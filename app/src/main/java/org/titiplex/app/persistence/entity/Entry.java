@@ -9,7 +9,7 @@ import java.time.Instant;
 @Entity
 @Getter
 @Setter
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+@Inheritance(strategy = InheritanceType.JOINED)
 public class Entry {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
