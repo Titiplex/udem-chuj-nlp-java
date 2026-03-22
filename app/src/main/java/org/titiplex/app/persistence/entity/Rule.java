@@ -25,6 +25,10 @@ public class Rule {
     @Column(nullable = false, length = 200)
     private String name;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "kind", nullable = false, length = 32)
+    private RuleKind kind = RuleKind.CORRECTION;
+
     @Column(nullable = false)
     private boolean enabled = true;
 
@@ -51,10 +55,16 @@ public class Rule {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (this.kind == null) {
+            this.kind = RuleKind.CORRECTION;
+        }
     }
 
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = Instant.now();
+        if (this.kind == null) {
+            this.kind = RuleKind.CORRECTION;
+        }
     }
 }

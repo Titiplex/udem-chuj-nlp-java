@@ -2,6 +2,7 @@ package org.titiplex.app.ui.rule;
 
 import org.titiplex.app.domain.validation.ValidationRun;
 import org.titiplex.app.persistence.entity.Rule;
+import org.titiplex.app.persistence.entity.RuleKind;
 import org.titiplex.app.service.RuleService;
 import org.titiplex.app.ui.common.Dialogs;
 import org.titiplex.app.ui.common.ValidationDialogs;
@@ -13,10 +14,12 @@ import java.nio.file.Path;
 import java.util.function.Consumer;
 
 public final class RulePanel extends JPanel {
+    private final JComboBox<RuleKind> kindFilterBox = new JComboBox<>(RuleKind.values());
     private final RuleTableModel tableModel = new RuleTableModel();
     private final RuleEditorPanel editorPanel = new RuleEditorPanel();
     private final RuleBuilderPanel builderPanel = new RuleBuilderPanel();
     private final JTable table = new JTable(tableModel);
+
     private final RuleService ruleService;
     private final Consumer<String> statusConsumer;
 
@@ -37,6 +40,9 @@ public final class RulePanel extends JPanel {
         JButton loadBuilderButton = new JButton("Load builder YAML");
         JButton refreshButton = new JButton("Refresh");
 
+        toolBar.add(new JLabel("Kind: "));
+        toolBar.add(kindFilterBox);
+        toolBar.addSeparator();
         toolBar.add(newButton);
         toolBar.add(validateButton);
         toolBar.add(validateAllButton);
@@ -46,6 +52,8 @@ public final class RulePanel extends JPanel {
         toolBar.add(refreshButton);
 
         add(toolBar, BorderLayout.NORTH);
+
+        kindFilterBox.addActionListener(event -> refresh());
 
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoCreateRowSorter(true);
@@ -58,7 +66,7 @@ public final class RulePanel extends JPanel {
 
         newButton.addActionListener(event -> createNewRule());
         validateButton.addActionListener(event -> validateCurrentRule());
-        validateAllButton.addActionListener(event -> validateAllRules());
+        validateAllButton.addActionListener(event -> validateCurrentKind());
         saveButton.addActionListener(event -> saveCurrentRule());
         deleteButton.addActionListener(event -> deleteCurrentRule());
         loadBuilderButton.addActionListener(event -> loadBuilderYamlIntoEditor());
@@ -82,18 +90,19 @@ public final class RulePanel extends JPanel {
     public void createNewRule() {
         table.clearSelection();
         editorPanel.setRule(null);
+        editorPanel.setKind(getSelectedKind());
     }
 
     public void refresh() {
-        tableModel.setRules(ruleService.getAll());
-        statusConsumer.accept(tableModel.getRowCount() + " rule(s) loaded.");
+        tableModel.setRules(ruleService.getAllByKind(getSelectedKind()));
+        statusConsumer.accept(tableModel.getRowCount() + " " + getSelectedKind() + " rule(s) loaded.");
     }
 
     public void importYaml(Path path) {
         try {
-            int count = ruleService.importYaml(path);
+            int count = ruleService.importYaml(path, getSelectedKind());
             refresh();
-            statusConsumer.accept("Imported " + count + " rule(s).");
+            statusConsumer.accept("Imported " + count + " " + getSelectedKind() + " rule(s).");
             Dialogs.info(this, "Imported " + count + " rule(s).");
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to import YAML", exception);
@@ -102,16 +111,21 @@ public final class RulePanel extends JPanel {
 
     public void exportYaml(Path path) {
         try {
-            ruleService.exportYaml(path);
-            statusConsumer.accept("Rules exported to " + path.getFileName());
+            ruleService.exportYaml(path, getSelectedKind());
+            statusConsumer.accept(getSelectedKind() + " rules exported to " + path.getFileName());
             Dialogs.info(this, "Rules exported.");
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to export YAML", exception);
         }
     }
 
+    private RuleKind getSelectedKind() {
+        return (RuleKind) kindFilterBox.getSelectedItem();
+    }
+
     private void loadBuilderYamlIntoEditor() {
         try {
+            editorPanel.setKind(builderPanel.getSelectedKind());
             editorPanel.setYamlBody(builderPanel.generateYaml());
             statusConsumer.accept("Builder YAML loaded into editor.");
         } catch (Exception exception) {
@@ -129,13 +143,13 @@ public final class RulePanel extends JPanel {
         }
     }
 
-    private void validateAllRules() {
+    private void validateCurrentKind() {
         try {
             ValidationRun run = ruleService.validateAll();
             ValidationDialogs.showValidation(this, "All rules validation", run);
             statusConsumer.accept(run.summary());
         } catch (Exception exception) {
-            Dialogs.error(this, "Failed to validate all rules", exception);
+            Dialogs.error(this, "Failed to validate rules", exception);
         }
     }
 

@@ -3,6 +3,7 @@ package org.titiplex.app.ui.rule;
 import org.titiplex.app.domain.rule.RuleId;
 import org.titiplex.app.domain.rule.RuleVersion;
 import org.titiplex.app.persistence.entity.Rule;
+import org.titiplex.app.persistence.entity.RuleKind;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,6 +12,7 @@ import java.time.Instant;
 public final class RuleEditorPanel extends JPanel {
     private final JTextField ruleIdField = new JTextField();
     private final JTextField nameField = new JTextField();
+    private final JComboBox<RuleKind> kindBox = new JComboBox<>(RuleKind.values());
     private final JTextField sourceField = new JTextField();
     private final JTextField versionField = new JTextField();
     private final JTextArea descriptionArea = new JTextArea(5, 80);
@@ -61,6 +63,15 @@ public final class RuleEditorPanel extends JPanel {
         c.gridx = 0;
         c.gridy = 2;
         c.weightx = 0;
+        panel.add(new JLabel("Kind"), c);
+
+        c.gridx = 1;
+        c.weightx = 1;
+        panel.add(kindBox, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        c.weightx = 0;
         panel.add(new JLabel("Source"), c);
 
         c.gridx = 1;
@@ -68,7 +79,7 @@ public final class RuleEditorPanel extends JPanel {
         panel.add(sourceField, c);
 
         c.gridx = 0;
-        c.gridy = 3;
+        c.gridy = 4;
         c.weightx = 0;
         panel.add(new JLabel("Version"), c);
 
@@ -77,7 +88,7 @@ public final class RuleEditorPanel extends JPanel {
         panel.add(versionField, c);
 
         c.gridx = 1;
-        c.gridy = 4;
+        c.gridy = 5;
         panel.add(enabledBox, c);
 
         return panel;
@@ -105,6 +116,7 @@ public final class RuleEditorPanel extends JPanel {
         if (rule == null) {
             ruleIdField.setText("");
             nameField.setText("");
+            kindBox.setSelectedItem(RuleKind.CORRECTION);
             sourceField.setText("desktop-editor");
             versionField.setText("1");
             descriptionArea.setText("");
@@ -115,6 +127,7 @@ public final class RuleEditorPanel extends JPanel {
 
         ruleIdField.setText(rule.getStableId());
         nameField.setText(rule.getName());
+        kindBox.setSelectedItem(rule.getKind());
         sourceField.setText(rule.getSourceFile());
         versionField.setText(String.valueOf(rule.getVersionNo()));
         descriptionArea.setText(rule.getDescription());
@@ -124,6 +137,10 @@ public final class RuleEditorPanel extends JPanel {
 
     public void setYamlBody(String yamlBody) {
         yamlArea.setText(yamlBody == null ? "" : yamlBody);
+    }
+
+    public void setKind(RuleKind kind) {
+        kindBox.setSelectedItem(kind);
     }
 
     public Rule toRule() {
@@ -138,6 +155,7 @@ public final class RuleEditorPanel extends JPanel {
                 currentRule == null ? null : currentRule.getId(),
                 stableId,
                 name,
+                (RuleKind) kindBox.getSelectedItem(),
                 enabledBox.isSelected(),
                 yamlArea.getText(),
                 currentRule == null ? "desktop-editor" : currentRule.getSourceFile(),

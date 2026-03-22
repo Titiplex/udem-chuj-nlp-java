@@ -2,6 +2,7 @@ package org.titiplex.app.service;
 
 import org.springframework.stereotype.Service;
 import org.titiplex.app.persistence.entity.Rule;
+import org.titiplex.app.persistence.entity.RuleKind;
 import org.titiplex.app.persistence.repository.RuleRepository;
 import org.titiplex.rules.CorrectionRule;
 import org.titiplex.rules.PythonStyleYamlRuleLoader;
@@ -24,10 +25,7 @@ public class DesktopPipelineFactory {
         PythonStyleYamlRuleLoader loader = new PythonStyleYamlRuleLoader();
         List<CorrectionRule> compiledRules = new ArrayList<>();
 
-        for (Rule rule : ruleRepository.findAll()) {
-            if (!rule.isEnabled()) {
-                continue;
-            }
+        for (Rule rule : ruleRepository.findAllByEnabledTrueAndKindOrderByStableIdAsc(RuleKind.CORRECTION)) {
             if (rule.getYamlBody() == null || rule.getYamlBody().isBlank()) {
                 continue;
             }

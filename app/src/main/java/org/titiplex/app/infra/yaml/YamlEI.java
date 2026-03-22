@@ -3,6 +3,7 @@ package org.titiplex.app.infra.yaml;
 import org.titiplex.app.domain.rule.RuleId;
 import org.titiplex.app.domain.rule.RuleVersion;
 import org.titiplex.app.persistence.entity.Rule;
+import org.titiplex.app.persistence.entity.RuleKind;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
@@ -70,6 +71,7 @@ public final class YamlEI {
                         null,
                         new RuleId(stableId).toString(),
                         name,
+                        RuleKind.CORRECTION,
                         true,
                         yaml.dump(singleRuleRoot),
                         path.getFileName().toString(),

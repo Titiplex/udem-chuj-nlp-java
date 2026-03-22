@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.titiplex.app.domain.validation.ValidationRun;
 import org.titiplex.app.infra.yaml.YamlEI;
 import org.titiplex.app.persistence.entity.Rule;
+import org.titiplex.app.persistence.entity.RuleKind;
 import org.titiplex.app.persistence.repository.RuleRepository;
 
 import java.nio.file.Path;
@@ -29,6 +30,10 @@ public final class RuleService {
         return ruleRepository.findAll();
     }
 
+    public List<Rule> getAllByKind(RuleKind kind) {
+        return ruleRepository.findAllByKindOrderByStableIdAsc(kind);
+    }
+
     public Optional<Rule> findById(Long id) {
         return ruleRepository.findById(id);
     }
@@ -42,10 +47,18 @@ public final class RuleService {
         if (!validation.ok()) {
             throw new IllegalStateException(validation.summary());
         }
+        if (rule.getKind() == null) {
+            rule.setKind(RuleKind.CORRECTION);
+        }
         return ruleRepository.save(rule);
     }
 
     public void saveAll(Collection<Rule> rules) {
+        for (Rule rule : rules) {
+            if (rule.getKind() == null) {
+                rule.setKind(RuleKind.CORRECTION);
+            }
+        }
         ruleRepository.saveAll(rules);
     }
 
@@ -57,17 +70,15 @@ public final class RuleService {
         return validationService.validateAll();
     }
 
-    public void exportYaml(Path outputPath) {
-        ValidationRun validation = validationService.validateAll();
-        if (!validation.ok()) {
-            throw new IllegalStateException("Refusing to export invalid rules");
-        }
-        exporter.writeRules(getAll(), outputPath);
+    public void exportYaml(Path outputPath, RuleKind kind) {
+        List<Rule> rules = getAllByKind(kind);
+        exporter.writeRules(rules, outputPath);
     }
 
-    public int importYaml(Path path) {
+    public int importYaml(Path path, RuleKind kind) {
         List<Rule> rules = exporter.readRules(path);
         for (Rule rule : rules) {
+            rule.setKind(kind);
             ValidationRun validation = validationService.validateRule(rule);
             if (!validation.ok()) {
                 throw new IllegalStateException(

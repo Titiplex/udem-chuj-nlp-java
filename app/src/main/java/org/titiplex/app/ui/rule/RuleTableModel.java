@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class RuleTableModel extends AbstractTableModel {
-    private final String[] columns = {"Id", "Name", "Enabled"};
+    private final String[] columns = {"Id", "Name", "Kind", "Enabled"};
     private final List<Rule> rules = new ArrayList<>();
 
     public void setRules(List<Rule> newRules) {
@@ -36,7 +36,8 @@ public final class RuleTableModel extends AbstractTableModel {
         return switch (columnIndex) {
             case 0 -> rule.getStableId();
             case 1 -> rule.getName();
-            case 2 -> rule.isEnabled();
+            case 2 -> rule.getKind();
+            case 3 -> rule.isEnabled();
             default -> null;
         };
     }

@@ -1,5 +1,6 @@
 package org.titiplex.app.ui.rule.builder;
 
+import org.titiplex.app.persistence.entity.RuleKind;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.swing.*;
@@ -9,14 +10,20 @@ import java.util.List;
 import java.util.Map;
 
 public class RuleBuilderPanel extends JPanel {
+    private final JComboBox<RuleKind> kindBox = new JComboBox<>(RuleKind.values());
     private final JTextField idField = new JTextField();
     private final JTextField nameField = new JTextField();
 
-    private final JComboBox<String> typeBox = new JComboBox<>(new String[]{
+    private final JComboBox<String> correctionTypeBox = new JComboBox<>(new String[]{
             "rewrite_before_after",
             "regex_sub",
             "split_suffix",
             "delete_chars"
+    });
+
+    private final JComboBox<String> conlluTypeBox = new JComboBox<>(new String[]{
+            "set_upos",
+            "set_feat"
     });
 
     private final JTextField matchGlossField = new JTextField();
@@ -26,6 +33,11 @@ public class RuleBuilderPanel extends JPanel {
     private final JTextField regexReplacementField = new JTextField();
     private final JTextField suffixesField = new JTextField();
     private final JTextField deleteCharsField = new JTextField();
+
+    private final JTextField conlluGlossField = new JTextField();
+    private final JTextField conlluUposField = new JTextField();
+    private final JTextField conlluFeatKeyField = new JTextField();
+    private final JTextField conlluFeatValueField = new JTextField();
 
     private final JTextArea previewArea = new JTextArea(18, 60);
 
@@ -38,16 +50,22 @@ public class RuleBuilderPanel extends JPanel {
         JPanel form = new JPanel(new GridLayout(0, 2, 8, 8));
         form.setBorder(BorderFactory.createTitledBorder("Guided rule builder"));
 
+        form.add(new JLabel("Rule kind"));
+        form.add(kindBox);
+
         form.add(new JLabel("Rule id"));
         form.add(idField);
 
         form.add(new JLabel("Name"));
         form.add(nameField);
 
-        form.add(new JLabel("Type"));
-        form.add(typeBox);
+        form.add(new JLabel("Correction type"));
+        form.add(correctionTypeBox);
 
-        form.add(new JLabel("Match gloss (optional)"));
+        form.add(new JLabel("CoNLL-U type"));
+        form.add(conlluTypeBox);
+
+        form.add(new JLabel("Match gloss (correction)"));
         form.add(matchGlossField);
 
         form.add(new JLabel("Before (comma-separated)"));
@@ -68,6 +86,18 @@ public class RuleBuilderPanel extends JPanel {
         form.add(new JLabel("Chars to delete (comma-separated)"));
         form.add(deleteCharsField);
 
+        form.add(new JLabel("Match gloss (CoNLL-U)"));
+        form.add(conlluGlossField);
+
+        form.add(new JLabel("UPOS"));
+        form.add(conlluUposField);
+
+        form.add(new JLabel("Feat key"));
+        form.add(conlluFeatKeyField);
+
+        form.add(new JLabel("Feat value"));
+        form.add(conlluFeatValueField);
+
         JButton generateButton = new JButton("Generate YAML");
         generateButton.addActionListener(event -> previewArea.setText(generateYaml()));
 
@@ -76,10 +106,22 @@ public class RuleBuilderPanel extends JPanel {
         add(new JScrollPane(previewArea), BorderLayout.SOUTH);
     }
 
+    public RuleKind getSelectedKind() {
+        return (RuleKind) kindBox.getSelectedItem();
+    }
+
     public String generateYaml() {
+        RuleKind kind = getSelectedKind();
+        if (kind == RuleKind.CONLLU) {
+            return generateConlluYaml();
+        }
+        return generateCorrectionYaml();
+    }
+
+    private String generateCorrectionYaml() {
         String id = idField.getText().trim();
         String name = nameField.getText().trim();
-        String type = (String) typeBox.getSelectedItem();
+        String type = (String) correctionTypeBox.getSelectedItem();
 
         if (id.isBlank()) {
             throw new IllegalArgumentException("Rule id cannot be blank");
@@ -124,10 +166,60 @@ public class RuleBuilderPanel extends JPanel {
                 delete.put("chars", csv(deleteCharsField.getText()));
                 rewrite.put("delete", delete);
             }
-            default -> throw new IllegalStateException("Unsupported builder type: " + type);
+            default -> throw new IllegalStateException("Unsupported correction builder type: " + type);
         }
 
         rule.put("rewrite", rewrite);
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("rules", List.of(rule));
+
+        return new Yaml().dump(root);
+    }
+
+    private String generateConlluYaml() {
+        String id = idField.getText().trim();
+        String name = nameField.getText().trim();
+        String type = (String) conlluTypeBox.getSelectedItem();
+
+        if (id.isBlank()) {
+            throw new IllegalArgumentException("Rule id cannot be blank");
+        }
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Rule name cannot be blank");
+        }
+        if (conlluGlossField.getText().trim().isBlank()) {
+            throw new IllegalArgumentException("CoNLL-U gloss match cannot be blank");
+        }
+
+        Map<String, Object> rule = new LinkedHashMap<>();
+        rule.put("name", name);
+
+        Map<String, Object> match = new LinkedHashMap<>();
+        match.put("gloss", conlluGlossField.getText().trim());
+        rule.put("match", match);
+
+        Map<String, Object> set = new LinkedHashMap<>();
+
+        switch (type) {
+            case "set_upos" -> {
+                if (conlluUposField.getText().trim().isBlank()) {
+                    throw new IllegalArgumentException("UPOS cannot be blank");
+                }
+                set.put("upos", conlluUposField.getText().trim());
+            }
+            case "set_feat" -> {
+                if (conlluFeatKeyField.getText().trim().isBlank() || conlluFeatValueField.getText().trim().isBlank()) {
+                    throw new IllegalArgumentException("Feat key and value cannot be blank");
+                }
+                Map<String, Object> feats = new LinkedHashMap<>();
+                feats.put(conlluFeatKeyField.getText().trim(), conlluFeatValueField.getText().trim());
+                set.put("feats", feats);
+            }
+            default -> throw new IllegalStateException("Unsupported CoNLL-U builder type: " + type);
+        }
+
+        rule.put("set", set);
 
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("rules", List.of(rule));

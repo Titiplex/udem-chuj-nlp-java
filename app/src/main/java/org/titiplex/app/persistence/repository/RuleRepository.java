@@ -2,6 +2,12 @@ package org.titiplex.app.persistence.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.titiplex.app.persistence.entity.Rule;
+import org.titiplex.app.persistence.entity.RuleKind;
+
+import java.util.List;
 
 public interface RuleRepository extends JpaRepository<Rule, Long> {
+    List<Rule> findAllByKindOrderByStableIdAsc(RuleKind kind);
+
+    List<Rule> findAllByEnabledTrueAndKindOrderByStableIdAsc(RuleKind kind);
 }
