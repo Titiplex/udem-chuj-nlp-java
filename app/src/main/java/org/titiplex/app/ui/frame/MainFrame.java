@@ -1,40 +1,57 @@
 package org.titiplex.app.ui.frame;
 
-import org.titiplex.app.service.CorrectedEntryService;
-import org.titiplex.app.service.RawEntryService;
-import org.titiplex.app.service.RuleService;
+import org.springframework.stereotype.Component;
+import org.titiplex.app.service.*;
 import org.titiplex.app.ui.common.Dialogs;
 import org.titiplex.app.ui.entry.EntryPanel;
+import org.titiplex.app.ui.raw.RawEntryPanel;
 import org.titiplex.app.ui.rule.RulePanel;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.io.File;
 
+@Component
 public class MainFrame extends JFrame {
     private final JLabel statusLabel = new JLabel("Ready");
+
     private final RulePanel rulePanel;
     private final EntryPanel entryPanel;
+    private final RawEntryPanel rawEntryPanel;
+    private final DesktopExportService exportService;
 
     public MainFrame(
             RuleService ruleService,
             CorrectedEntryService correctedEntryService,
-            RawEntryService rawEntryService
+            RawEntryService rawEntryService,
+            CorpusImportService corpusImportService,
+            AutoCorrectionService autoCorrectionService,
+            DesktopExportService exportService
     ) {
         super("Chuj NLP Studio");
 
+        this.exportService = exportService;
+
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(1100, 760));
-        setSize(1280, 840);
+        setMinimumSize(new Dimension(1180, 780));
+        setSize(1320, 860);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
         this.rulePanel = new RulePanel(ruleService, this::setStatus);
         this.entryPanel = new EntryPanel(correctedEntryService, rawEntryService, this::setStatus);
+        this.rawEntryPanel = new RawEntryPanel(
+                rawEntryService,
+                corpusImportService,
+                autoCorrectionService,
+                this::setStatus
+        );
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Rules", rulePanel);
-        tabs.addTab("Entries", entryPanel);
+        tabs.addTab("Raw entries", rawEntryPanel);
+        tabs.addTab("Corrected entries", entryPanel);
 
         add(tabs, BorderLayout.CENTER);
         add(buildStatusBar(), BorderLayout.SOUTH);
@@ -59,18 +76,22 @@ public class MainFrame extends JFrame {
             setStatus("New rule editor opened.");
         });
 
-        JMenuItem newEntryItem = new JMenuItem("New corrected entry");
-        newEntryItem.addActionListener(event -> {
-            entryPanel.createNewEntry();
-            setStatus("New entry editor opened.");
+        JMenuItem newRawEntryItem = new JMenuItem("New raw entry");
+        newRawEntryItem.addActionListener(event -> {
+            rawEntryPanel.createNewEntry();
+            setStatus("New raw entry editor opened.");
         });
 
-        JMenuItem exportRulesItem = new JMenuItem("Export rules YAML");
-        exportRulesItem.addActionListener(event -> rulePanel.exportYaml());
+        JMenuItem exportDocxItem = new JMenuItem("Export corrected DOCX");
+        exportDocxItem.addActionListener(event -> exportCorrectedDocx());
+
+        JMenuItem exportStatsItem = new JMenuItem("Export stats TXT");
+        exportStatsItem.addActionListener(event -> exportStats());
 
         JMenuItem refreshItem = new JMenuItem("Refresh all");
         refreshItem.addActionListener(event -> {
             rulePanel.refresh();
+            rawEntryPanel.refresh();
             entryPanel.refresh();
             setStatus("Data refreshed.");
         });
@@ -79,9 +100,11 @@ public class MainFrame extends JFrame {
         quitItem.addActionListener(event -> dispose());
 
         fileMenu.add(newRuleItem);
-        fileMenu.add(newEntryItem);
+        fileMenu.add(newRawEntryItem);
         fileMenu.addSeparator();
-        fileMenu.add(exportRulesItem);
+        fileMenu.add(exportDocxItem);
+        fileMenu.add(exportStatsItem);
+        fileMenu.addSeparator();
         fileMenu.add(refreshItem);
         fileMenu.addSeparator();
         fileMenu.add(quitItem);
@@ -89,13 +112,45 @@ public class MainFrame extends JFrame {
         JMenu helpMenu = new JMenu("Help");
         JMenuItem aboutItem = new JMenuItem("About");
         aboutItem.addActionListener(event ->
-                Dialogs.info(this, "Chuj NLP Studio\nDesktop editor for rules and annotated entries.")
+                Dialogs.info(this, "Chuj NLP Studio\nWave 1: rules, raw entries, corrected entries, imports and exports.")
         );
         helpMenu.add(aboutItem);
 
         menuBar.add(fileMenu);
         menuBar.add(helpMenu);
         return menuBar;
+    }
+
+    private void exportCorrectedDocx() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setSelectedFile(new File("corrected-entries.docx"));
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        try {
+            exportService.exportCorrectedDocx(chooser.getSelectedFile().toPath());
+            setStatus("Corrected DOCX exported.");
+            Dialogs.info(this, "Corrected DOCX exported.");
+        } catch (Exception exception) {
+            Dialogs.error(this, "Failed to export corrected DOCX", exception);
+        }
+    }
+
+    private void exportStats() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setSelectedFile(new File("corpus-stats.txt"));
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        try {
+            exportService.exportStats(chooser.getSelectedFile().toPath());
+            setStatus("Stats exported.");
+            Dialogs.info(this, "Stats exported.");
+        } catch (Exception exception) {
+            Dialogs.error(this, "Failed to export stats", exception);
+        }
     }
 
     private void setStatus(String status) {
