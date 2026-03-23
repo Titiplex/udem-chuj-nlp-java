@@ -4,6 +4,7 @@ import org.titiplex.app.persistence.entity.RuleKind;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -54,38 +55,64 @@ public class RuleBuilderPanel extends JPanel {
     private final JTextArea previewArea = new JTextArea(20, 80);
 
     public RuleBuilderPanel() {
-        setLayout(new BorderLayout(8, 8));
+        setLayout(new BorderLayout());
 
         previewArea.setEditable(false);
         previewArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        previewArea.setLineWrap(false);
+
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
+        conlluExtractorIncludeArea.setLineWrap(true);
+        conlluExtractorIncludeArea.setWrapStyleWord(true);
+        conlluFeatTemplateArea.setLineWrap(true);
+        conlluFeatTemplateArea.setWrapStyleWord(true);
 
-        JPanel top = new JPanel(new GridBagLayout());
-        top.setBorder(BorderFactory.createTitledBorder("Guided rule builder"));
-        GridBagConstraints c = baseConstraints();
+        JPanel formRoot = new JPanel();
+        formRoot.setLayout(new BoxLayout(formRoot, BoxLayout.Y_AXIS));
+        formRoot.setBorder(new EmptyBorder(8, 8, 8, 8));
 
-        addRow(top, c, 0, "Rule kind", kindBox);
-        addRow(top, c, 1, "Rule id", idField);
-        addRow(top, c, 2, "Name", nameField);
-        addRow(top, c, 3, "Description", new JScrollPane(descriptionArea));
+        JPanel metaPanel = buildMetaPanel();
+        metaPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel cardsWrapper = new JPanel(new BorderLayout(8, 8));
+        cardsWrapper.setBorder(BorderFactory.createTitledBorder("Rule details"));
+        cardsWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         cards.add(buildCorrectionCard(), RuleKind.CORRECTION.name());
         cards.add(buildConlluCard(), RuleKind.CONLLU.name());
 
-        kindBox.addActionListener(event -> switchKindCard());
-
         JButton generateButton = new JButton("Generate YAML");
         generateButton.addActionListener(event -> previewArea.setText(generateYaml()));
 
-        JPanel center = new JPanel(new BorderLayout(8, 8));
-        center.add(cards, BorderLayout.CENTER);
-        center.add(generateButton, BorderLayout.SOUTH);
+        JPanel buttonBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        buttonBar.add(generateButton);
 
-        add(top, BorderLayout.NORTH);
-        add(center, BorderLayout.CENTER);
-        add(new JScrollPane(previewArea), BorderLayout.SOUTH);
+        cardsWrapper.add(cards, BorderLayout.CENTER);
+        cardsWrapper.add(buttonBar, BorderLayout.SOUTH);
 
+        formRoot.add(metaPanel);
+        formRoot.add(Box.createVerticalStrut(8));
+        formRoot.add(cardsWrapper);
+
+        JScrollPane formScroll = new JScrollPane(formRoot);
+        formScroll.setBorder(null);
+        formScroll.getVerticalScrollBar().setUnitIncrement(16);
+
+        JScrollPane previewScroll = new JScrollPane(previewArea);
+        previewScroll.setBorder(BorderFactory.createTitledBorder("YAML preview"));
+
+        JSplitPane verticalSplit = new JSplitPane(
+                JSplitPane.VERTICAL_SPLIT,
+                formScroll,
+                previewScroll
+        );
+        verticalSplit.setResizeWeight(0.72);
+        verticalSplit.setOneTouchExpandable(true);
+
+        add(verticalSplit, BorderLayout.CENTER);
+
+        kindBox.addActionListener(event -> switchKindCard());
         switchKindCard();
     }
 
@@ -101,9 +128,25 @@ public class RuleBuilderPanel extends JPanel {
         return generateCorrectionYaml();
     }
 
+    private JPanel buildMetaPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createTitledBorder("Guided rule builder"));
+
+        GridBagConstraints c = baseConstraints();
+
+        addRow(panel, c, 0, "Rule kind", kindBox);
+        addRow(panel, c, 1, "Rule id", idField);
+        addRow(panel, c, 2, "Name", nameField);
+
+        JScrollPane descriptionScroll = new JScrollPane(descriptionArea);
+        descriptionScroll.setPreferredSize(new Dimension(200, 90));
+        addRow(panel, c, 3, "Description", descriptionScroll);
+
+        return panel;
+    }
+
     private JPanel buildCorrectionCard() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Correction rule"));
         GridBagConstraints c = baseConstraints();
 
         addRow(panel, c, 0, "Correction type", correctionTypeBox);
@@ -115,12 +158,17 @@ public class RuleBuilderPanel extends JPanel {
         addRow(panel, c, 6, "Suffixes (comma-separated)", correctionSuffixesField);
         addRow(panel, c, 7, "Chars to delete (comma-separated)", correctionDeleteCharsField);
 
+        c.gridx = 0;
+        c.gridy = 8;
+        c.weighty = 1;
+        c.fill = GridBagConstraints.BOTH;
+        panel.add(Box.createVerticalGlue(), c);
+
         return panel;
     }
 
     private JPanel buildConlluCard() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("CoNLL-U rule"));
         GridBagConstraints c = baseConstraints();
 
         addRow(panel, c, 0, "CoNLL-U type", conlluTypeBox);
@@ -132,8 +180,20 @@ public class RuleBuilderPanel extends JPanel {
         addRow(panel, c, 6, "Feat key", conlluFeatKeyField);
         addRow(panel, c, 7, "Feat value", conlluFeatValueField);
         addRow(panel, c, 8, "Extractor name", conlluExtractorNameField);
-        addRow(panel, c, 9, "Extractor include file(s), one per line", new JScrollPane(conlluExtractorIncludeArea));
-        addRow(panel, c, 10, "Feat templates (key=value per line)", new JScrollPane(conlluFeatTemplateArea));
+
+        JScrollPane extractorIncludeScroll = new JScrollPane(conlluExtractorIncludeArea);
+        extractorIncludeScroll.setPreferredSize(new Dimension(200, 90));
+        addRow(panel, c, 9, "Extractor include file(s), one per line", extractorIncludeScroll);
+
+        JScrollPane featTemplateScroll = new JScrollPane(conlluFeatTemplateArea);
+        featTemplateScroll.setPreferredSize(new Dimension(200, 110));
+        addRow(panel, c, 10, "Feat templates (key=value per line)", featTemplateScroll);
+
+        c.gridx = 0;
+        c.gridy = 11;
+        c.weighty = 1;
+        c.fill = GridBagConstraints.BOTH;
+        panel.add(Box.createVerticalGlue(), c);
 
         return panel;
     }
@@ -141,6 +201,8 @@ public class RuleBuilderPanel extends JPanel {
     private void switchKindCard() {
         RuleKind kind = getSelectedKind();
         cardLayout.show(cards, kind.name());
+        revalidate();
+        repaint();
     }
 
     private String generateCorrectionYaml() {
@@ -272,6 +334,7 @@ public class RuleBuilderPanel extends JPanel {
         c.fill = GridBagConstraints.HORIZONTAL;
         c.anchor = GridBagConstraints.NORTHWEST;
         c.weightx = 1;
+        c.weighty = 0;
         return c;
     }
 
@@ -279,6 +342,8 @@ public class RuleBuilderPanel extends JPanel {
         c.gridx = 0;
         c.gridy = row;
         c.weightx = 0;
+        c.weighty = 0;
+        c.fill = GridBagConstraints.HORIZONTAL;
         panel.add(new JLabel(label), c);
 
         c.gridx = 1;
