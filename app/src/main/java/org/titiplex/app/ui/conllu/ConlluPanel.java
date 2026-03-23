@@ -41,18 +41,12 @@ public class ConlluPanel extends JPanel {
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
 
-        JButton loadConfigButton = new JButton("Load annotation YAML");
         JButton resetConfigButton = new JButton("Reset config");
         JButton previewButton = new JButton("Preview");
-        JButton exportButton = new JButton("Export selected .conllu");
-        JButton exportAllButton = new JButton("Export all .conllu");
         JButton refreshButton = new JButton("Refresh");
 
-        toolBar.add(loadConfigButton);
         toolBar.add(resetConfigButton);
         toolBar.add(previewButton);
-        toolBar.add(exportButton);
-        toolBar.add(exportAllButton);
         toolBar.add(refreshButton);
 
         add(toolBar, BorderLayout.NORTH);
@@ -66,11 +60,8 @@ public class ConlluPanel extends JPanel {
             }
         });
 
-        loadConfigButton.addActionListener(event -> loadAnnotationConfig());
         resetConfigButton.addActionListener(event -> resetAnnotationConfig());
         previewButton.addActionListener(event -> previewSelectedEntry());
-        exportButton.addActionListener(event -> exportSelectedEntry());
-        exportAllButton.addActionListener(event -> exportAllEntries());
         refreshButton.addActionListener(event -> refresh());
 
         JSplitPane splitPane = new JSplitPane(
@@ -89,10 +80,6 @@ public class ConlluPanel extends JPanel {
     public void refresh() {
         tableModel.setEntries(correctedEntryService.getAll());
         statusConsumer.accept(tableModel.getRowCount() + " corrected entrie(s) available for CoNLL-U.");
-    }
-
-    public void exportAllFromMenu() {
-        exportAllEntries();
     }
 
     private void loadAnnotationConfig() {
@@ -195,5 +182,24 @@ public class ConlluPanel extends JPanel {
         } else {
             configStatusLabel.setText("Annotation config: " + annotationConfigStateService.getCurrentPath());
         }
+    }
+
+    public void loadAnnotationConfigFromMenu(java.nio.file.Path path) {
+        try {
+            annotationConfigStateService.load(path);
+            updateConfigStatus();
+            statusConsumer.accept("Annotation config loaded: " + path.getFileName());
+            previewSelectedEntry();
+        } catch (Exception exception) {
+            Dialogs.error(this, "Failed to load annotation YAML", exception);
+        }
+    }
+
+    public void exportSelectedFromMenu() {
+        exportSelectedEntry();
+    }
+
+    public void exportAllFromMenu() {
+        exportAllEntries();
     }
 }

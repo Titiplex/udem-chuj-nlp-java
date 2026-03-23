@@ -72,11 +72,11 @@ public final class RuleService {
 
     public void exportYaml(Path outputPath, RuleKind kind) {
         List<Rule> rules = getAllByKind(kind);
-        exporter.writeRules(rules, outputPath);
+        exporter.writeRules(rules, outputPath, kind);
     }
 
     public int importYaml(Path path, RuleKind kind) {
-        List<Rule> rules = exporter.readRules(path);
+        List<Rule> rules = exporter.readRules(path, kind);
         for (Rule rule : rules) {
             rule.setKind(kind);
             ValidationRun validation = validationService.validateRule(rule);

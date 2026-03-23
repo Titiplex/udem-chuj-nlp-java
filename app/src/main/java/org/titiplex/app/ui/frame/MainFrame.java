@@ -87,32 +87,42 @@ public class MainFrame extends JFrame {
         JMenuBar menuBar = new JMenuBar();
 
         JMenu fileMenu = new JMenu("File");
+        JMenu importMenu = new JMenu("Import");
+        JMenu exportMenu = new JMenu("Export");
+        JMenu newMenu = new JMenu("New");
+        JMenu helpMenu = new JMenu("Help");
 
-        JMenuItem importCorpusItem = new JMenuItem("Import corpus DOCX/TXT");
+        JMenuItem importCorpusItem = new JMenuItem("Corpus DOCX/TXT...");
         importCorpusItem.addActionListener(event -> importCorpus());
 
-        JMenuItem importRulesItem = new JMenuItem("Import rules YAML");
+        JMenuItem importRulesItem = new JMenuItem("Rules YAML...");
         importRulesItem.addActionListener(event -> importRulesYaml());
 
-        JMenuItem exportRulesItem = new JMenuItem("Export rules YAML");
+        JMenuItem importAnnotationItem = new JMenuItem("Annotation YAML...");
+        importAnnotationItem.addActionListener(event -> importAnnotationYaml());
+
+        JMenuItem exportRulesItem = new JMenuItem("Rules YAML...");
         exportRulesItem.addActionListener(event -> exportRulesYaml());
 
-        JMenuItem exportDocxItem = new JMenuItem("Export corrected DOCX");
+        JMenuItem exportDocxItem = new JMenuItem("Corrected DOCX...");
         exportDocxItem.addActionListener(event -> exportCorrectedDocx());
 
-        JMenuItem exportStatsItem = new JMenuItem("Export stats TXT");
+        JMenuItem exportStatsItem = new JMenuItem("Stats TXT...");
         exportStatsItem.addActionListener(event -> exportStats());
 
-        JMenuItem exportConlluItem = new JMenuItem("Export corpus CoNLL-U");
-        exportConlluItem.addActionListener(event -> exportCorpusConllu());
+        JMenuItem exportConlluSelectedItem = new JMenuItem("Selected CoNLL-U...");
+        exportConlluSelectedItem.addActionListener(event -> exportSelectedConllu());
 
-        JMenuItem newRuleItem = new JMenuItem("New rule");
+        JMenuItem exportConlluAllItem = new JMenuItem("All CoNLL-U...");
+        exportConlluAllItem.addActionListener(event -> exportCorpusConllu());
+
+        JMenuItem newRuleItem = new JMenuItem("Rule");
         newRuleItem.addActionListener(event -> {
             rulePanel.createNewRule();
             setStatus("New rule editor opened.");
         });
 
-        JMenuItem newRawEntryItem = new JMenuItem("New raw entry");
+        JMenuItem newRawEntryItem = new JMenuItem("Raw entry");
         newRawEntryItem.addActionListener(event -> {
             rawEntryPanel.createNewEntry();
             setStatus("New raw entry editor opened.");
@@ -130,29 +140,35 @@ public class MainFrame extends JFrame {
         JMenuItem quitItem = new JMenuItem("Quit");
         quitItem.addActionListener(event -> dispose());
 
-        fileMenu.add(importCorpusItem);
-        fileMenu.add(importRulesItem);
-        fileMenu.addSeparator();
-        fileMenu.add(exportRulesItem);
-        fileMenu.add(exportDocxItem);
-        fileMenu.add(exportStatsItem);
-        fileMenu.add(exportConlluItem);
-        fileMenu.addSeparator();
-        fileMenu.add(newRuleItem);
-        fileMenu.add(newRawEntryItem);
-        fileMenu.addSeparator();
-        fileMenu.add(refreshItem);
-        fileMenu.addSeparator();
-        fileMenu.add(quitItem);
-
-        JMenu helpMenu = new JMenu("Help");
         JMenuItem aboutItem = new JMenuItem("About");
         aboutItem.addActionListener(event ->
                 Dialogs.info(this, "Chuj NLP Studio\nRules, raw entries, corrected entries, CoNLL-U preview/export.")
         );
+
+        importMenu.add(importCorpusItem);
+        importMenu.add(importRulesItem);
+        importMenu.add(importAnnotationItem);
+
+        exportMenu.add(exportRulesItem);
+        exportMenu.add(exportDocxItem);
+        exportMenu.add(exportStatsItem);
+        exportMenu.addSeparator();
+        exportMenu.add(exportConlluSelectedItem);
+        exportMenu.add(exportConlluAllItem);
+
+        newMenu.add(newRuleItem);
+        newMenu.add(newRawEntryItem);
+
+        fileMenu.add(refreshItem);
+        fileMenu.addSeparator();
+        fileMenu.add(quitItem);
+
         helpMenu.add(aboutItem);
 
         menuBar.add(fileMenu);
+        menuBar.add(importMenu);
+        menuBar.add(exportMenu);
+        menuBar.add(newMenu);
         menuBar.add(helpMenu);
         return menuBar;
     }
@@ -222,5 +238,18 @@ public class MainFrame extends JFrame {
 
     private void setStatus(String status) {
         statusLabel.setText(status == null || status.isBlank() ? "Ready" : status);
+    }
+
+    private void importAnnotationYaml() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setSelectedFile(new File("annotation.yaml"));
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        conlluPanel.loadAnnotationConfigFromMenu(chooser.getSelectedFile().toPath());
+    }
+
+    private void exportSelectedConllu() {
+        conlluPanel.exportSelectedFromMenu();
     }
 }

@@ -56,7 +56,10 @@ public final class AnnotationConfigLoader {
             }
         }
 
-        Map<String, Object> extractors = RuleYamlSupport.map(data.get("extractors"));
+        Map<String, Object> extractors = new LinkedHashMap<>();
+        extractors.putAll(RuleYamlSupport.map(data.get("extractors")));
+        extractors.putAll(loadNamedMapIncludes(data.get("extractors_file"), baseDir, "extractors"));
+
         for (var e : extractors.entrySet()) {
             Map<String, Object> ex = RuleYamlSupport.map(e.getValue());
             List<AnnotationConfig.RoutingRule> routingRules = new ArrayList<>();
@@ -75,7 +78,11 @@ public final class AnnotationConfigLoader {
             config.extractors().put(e.getKey(), new AnnotationConfig.ExtractorDef(e.getKey(), tagPattern, routingRules));
         }
 
-        List<Map<String, Object>> rules = (List<Map<String, Object>>) data.getOrDefault("rules", List.of());
+        List<Map<String, Object>> rules = new ArrayList<>(
+                (List<Map<String, Object>>) data.getOrDefault("rules", List.of())
+        );
+        rules.addAll(loadRulesIncludes(data.get("rules_file"), baseDir));
+
         for (Map<String, Object> rawRule : rules) {
             Map<String, Object> match = RuleYamlSupport.map(rawRule.get("match"));
             String scope = RuleYamlSupport.string(rawRule.get("scope"), "token");
@@ -98,9 +105,7 @@ public final class AnnotationConfigLoader {
                     effectiveMatch = RuleYamlSupport.map(glossObj);
                 }
             }
-            // Backward-compatible:
-            // - old configs may still use in_list
-            // - new configs should use in_lexicon
+
             inList.addAll(normalizeStringList(effectiveMatch.get("in_list"), baseDir));
             String regexText = RuleYamlSupport.string(effectiveMatch.get("regex"), "");
             if (!regexText.isBlank()) regex = Pattern.compile(regexText);
@@ -241,5 +246,58 @@ public final class AnnotationConfigLoader {
         }
 
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> loadYamlMap(Path path) {
+        Yaml yaml = new Yaml();
+        try (InputStream in = Files.newInputStream(path)) {
+            Object loaded = yaml.load(in);
+            if (loaded instanceof Map<?, ?> map) {
+                return (Map<String, Object>) map;
+            }
+            return Map.of();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to load YAML include: " + path, exception);
+        }
+    }
+
+    private static Map<String, Object> loadNamedMapIncludes(Object raw, Path baseDir, String rootKey) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        for (Path include : resolveIncludePaths(raw, baseDir)) {
+            Map<String, Object> yaml = loadYamlMap(include);
+            out.putAll(RuleYamlSupport.map(yaml.getOrDefault(rootKey, yaml)));
+        }
+        return out;
+    }
+
+    private static List<Map<String, Object>> loadRulesIncludes(Object raw, Path baseDir) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Path include : resolveIncludePaths(raw, baseDir)) {
+            Map<String, Object> yaml = loadYamlMap(include);
+            Object rules = yaml.get("rules");
+            if (rules instanceof List<?> list) {
+                for (Object item : list) {
+                    out.add(RuleYamlSupport.map(item));
+                }
+            }
+        }
+        return out;
+    }
+
+    private static List<Path> resolveIncludePaths(Object raw, Path baseDir) {
+        List<Path> out = new ArrayList<>();
+        if (raw == null || baseDir == null) {
+            return out;
+        }
+
+        List<String> values = raw instanceof String s ? List.of(s) : RuleYamlSupport.stringList(raw);
+        for (String value : values) {
+            Path candidate = resolveCandidate(baseDir, value);
+            if (candidate != null) {
+                out.add(candidate);
+            }
+        }
+        return out;
     }
 }

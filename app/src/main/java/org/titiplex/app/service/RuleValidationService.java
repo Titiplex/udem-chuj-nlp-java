@@ -4,7 +4,10 @@ import org.springframework.stereotype.Service;
 import org.titiplex.app.domain.validation.ValidationMessage;
 import org.titiplex.app.domain.validation.ValidationRun;
 import org.titiplex.app.persistence.entity.Rule;
+import org.titiplex.app.persistence.entity.RuleKind;
 import org.titiplex.app.persistence.repository.RuleRepository;
+import org.titiplex.conllu.AnnotationConfig;
+import org.titiplex.conllu.AnnotationConfigLoader;
 import org.titiplex.rules.PythonStyleYamlRuleLoader;
 
 import java.io.ByteArrayInputStream;
@@ -65,9 +68,16 @@ public final class RuleValidationService {
         }
 
         try (var stream = new ByteArrayInputStream(rule.getYamlBody().getBytes(StandardCharsets.UTF_8))) {
-            int generatedCorrections = new PythonStyleYamlRuleLoader().load(stream).size();
-            if (generatedCorrections == 0) {
-                messages.add(new ValidationMessage("WARN", "Rule does not generate executable corrections", rule.getId(), null));
+            if (rule.getKind() == RuleKind.CONLLU) {
+                AnnotationConfig config = new AnnotationConfigLoader().load(stream);
+                if (config.rules().isEmpty()) {
+                    messages.add(new ValidationMessage("WARN", "Annotation config contains no rules", rule.getId(), null));
+                }
+            } else {
+                int generatedCorrections = new PythonStyleYamlRuleLoader().load(stream).size();
+                if (generatedCorrections == 0) {
+                    messages.add(new ValidationMessage("WARN", "Rule does not generate executable corrections", rule.getId(), null));
+                }
             }
         } catch (Exception exception) {
             messages.add(new ValidationMessage("ERROR", "Validation error: " + exception.getMessage(), rule.getId(), null));
