@@ -76,6 +76,12 @@ public final class RulePanel extends JPanel {
         rightTabs.addTab("YAML editor", editorPanel);
         rightTabs.addTab("Guided builder", builderPanel);
 
+        builderPanel.setLoadIntoEditorAction(() -> {
+            editorPanel.setKind(builderPanel.getSelectedKind());
+            editorPanel.setYamlBody(builderPanel.getPreviewYaml());
+            statusConsumer.accept("Builder YAML loaded into editor.");
+        });
+
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
                 new JScrollPane(table),
