@@ -56,6 +56,24 @@ class RuleEditorPanelTest {
         assertThrows(IllegalArgumentException.class, panel::toRule);
     }
 
+    @Test
+    void toRuleRejectsMultipleRulesInDesktopEditor() throws Exception {
+        RuleEditorPanel panel = new RuleEditorPanel();
+
+        getField(panel, "ruleIdField", JTextField.class).setText("edited_rule");
+        getField(panel, "nameField", JTextField.class).setText("Edited Rule");
+        getField(panel, "yamlArea", JTextArea.class).setText("""
+                rules:
+                  - id: first
+                    name: First
+                  - id: second
+                    name: Second
+                """);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, panel::toRule);
+        assertEquals("Desktop rule editor expects exactly one rule in the YAML body.", exception.getMessage());
+    }
+
     private static <T> T getField(Object target, String fieldName, Class<T> type) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

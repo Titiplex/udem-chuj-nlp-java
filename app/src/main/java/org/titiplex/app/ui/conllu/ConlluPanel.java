@@ -85,8 +85,45 @@ public class ConlluPanel extends JPanel {
     }
 
     public void refresh() {
+        Long selectedEntryId = getSelectedEntryId();
+
         tableModel.setEntries(correctedEntryService.getAll());
+        restoreSelection(selectedEntryId);
+
+        if (table.getSelectedRow() < 0) {
+            previewArea.setText("");
+        }
+
         statusConsumer.accept(tableModel.getRowCount() + " corrected entrie(s) available for CoNLL-U.");
+    }
+
+    private Long getSelectedEntryId() {
+        int row = table.getSelectedRow();
+        if (row < 0) {
+            return null;
+        }
+        int modelRow = table.convertRowIndexToModel(row);
+        CorrectedEntry entry = tableModel.getEntryAt(modelRow);
+        return entry == null ? null : entry.getId();
+    }
+
+    private void restoreSelection(Long entryId) {
+        if (entryId == null) {
+            table.clearSelection();
+            return;
+        }
+
+        for (int modelRow = 0; modelRow < tableModel.getRowCount(); modelRow++) {
+            CorrectedEntry entry = tableModel.getEntryAt(modelRow);
+            if (entry != null && entryId.equals(entry.getId())) {
+                int viewRow = table.convertRowIndexToView(modelRow);
+                table.setRowSelectionInterval(viewRow, viewRow);
+                previewSelectedEntry();
+                return;
+            }
+        }
+
+        table.clearSelection();
     }
 
     private void loadAnnotationConfig() {

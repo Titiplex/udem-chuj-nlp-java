@@ -9,12 +9,14 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.titiplex.app.ui.frame.MainFrame;
 
 import javax.swing.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @SpringBootApplication
 @NoArgsConstructor
 public class Main {
     public static void main(String[] args) {
-        // flat laf should be initialized before spring application context
         FlatDarkLaf.setup();
 
         ConfigurableApplicationContext context = new SpringApplicationBuilder(Main.class)
@@ -24,6 +26,27 @@ public class Main {
 
         SwingUtilities.invokeLater(() -> {
             MainFrame frame = context.getBean(MainFrame.class);
+            AtomicBoolean closing = new AtomicBoolean(false);
+
+            Runnable shutdown = () -> {
+                if (!closing.compareAndSet(false, true)) {
+                    return;
+                }
+                try {
+                    frame.dispose();
+                } finally {
+                    context.close();
+                }
+            };
+
+            frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+            frame.setQuitAction(shutdown);
+            frame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent event) {
+                    shutdown.run();
+                }
+            });
             frame.setVisible(true);
         });
     }

@@ -465,9 +465,13 @@ public final class RuleBuilderPanel extends JPanel {
         if (matchStartsWithVowelBox.isSelected()) {
             tokens.put("startswith_vowel", true);
         }
+        boolean hasTokenSequences = !matchTokenSequencesPanel.getSequences().isEmpty();
+        if (!tokens.isEmpty() && hasTokenSequences) {
+            throw new IllegalArgumentException("Use either token selector fields or token sequences, not both.");
+        }
         if (!tokens.isEmpty()) {
             match.put("tokens", tokens);
-        } else if (!matchTokenSequencesPanel.getSequences().isEmpty()) {
+        } else if (hasTokenSequences) {
             match.put("tokens", matchTokenSequencesPanel.getSequences());
         }
 
@@ -496,6 +500,9 @@ public final class RuleBuilderPanel extends JPanel {
         if ("global_config".equals(mode) || "rule_full".equals(mode)) {
             fillConlluGlobals(root);
         }
+        if ("global_config".equals(mode) && root.isEmpty()) {
+            throw new IllegalArgumentException("Global config cannot be empty.");
+        }
 
         if (!"global_config".equals(mode)) {
             Map<String, Object> rule = new LinkedHashMap<>();
@@ -513,6 +520,8 @@ public final class RuleBuilderPanel extends JPanel {
             Map<String, Object> set = buildConlluSet(mode);
             if (!set.isEmpty()) rule.put("set", set);
 
+            validateConlluRule(mode, set);
+
             root.put("rules", List.of(rule));
         }
 
@@ -526,7 +535,20 @@ public final class RuleBuilderPanel extends JPanel {
         putListIfPresent(match, "require", conlluMatchRequirePanel.getValues());
         putListIfPresent(match, "forbid", conlluMatchForbidPanel.getValues());
 
-        if (!nullToEmpty(conlluMatchGlossLiteralField.getText()).isBlank()) {
+        boolean hasLiteralGloss = !nullToEmpty(conlluMatchGlossLiteralField.getText()).isBlank();
+        boolean hasStructuredGloss =
+                !nullToEmpty(conlluMatchGlossRegexField.getText()).isBlank()
+                        || !nullToEmpty(conlluMatchGlossInLexiconField.getText()).isBlank()
+                        || !conlluMatchGlossInListPanel.getValues().isEmpty()
+                        || !conlluMatchGlossRequirePanel.getValues().isEmpty()
+                        || !conlluMatchGlossForbidPanel.getValues().isEmpty()
+                        || !conlluMatchExtractPanel.getSpecs().isEmpty();
+
+        if (hasLiteralGloss && hasStructuredGloss) {
+            throw new IllegalArgumentException("Choose either a literal gloss match or structured gloss criteria, not both.");
+        }
+
+        if (hasLiteralGloss) {
             match.put("gloss", conlluMatchGlossLiteralField.getText().trim());
         } else {
             Map<String, Object> gloss = new LinkedHashMap<>();
@@ -728,5 +750,33 @@ public final class RuleBuilderPanel extends JPanel {
             throw new IllegalArgumentException(message);
         }
         return values;
+    }
+
+    private void validateConlluRule(String mode, Map<String, Object> set) {
+        switch (mode) {
+            case "rule_upos" -> {
+                if (!set.containsKey("upos")) {
+                    throw new IllegalArgumentException("set.upos is required for rule_upos.");
+                }
+            }
+            case "rule_feats" -> {
+                if (!set.containsKey("feats") && !set.containsKey("feats_template")) {
+                    throw new IllegalArgumentException("At least one feat mapping is required for rule_feats.");
+                }
+            }
+            case "rule_extract" -> {
+                if (!set.containsKey("extract")) {
+                    throw new IllegalArgumentException("At least one extract mapping is required for rule_extract.");
+                }
+            }
+            case "rule_full" -> {
+                if (set.isEmpty()) {
+                    throw new IllegalArgumentException("rule_full must set at least one of upos, feats, feats_template, or extract.");
+                }
+            }
+            default -> {
+                // nothing
+            }
+        }
     }
 }

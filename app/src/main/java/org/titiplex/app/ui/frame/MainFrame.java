@@ -1,15 +1,7 @@
 package org.titiplex.app.ui.frame;
 
 import org.springframework.stereotype.Component;
-import org.titiplex.app.service.AnnotationConfigStateService;
-import org.titiplex.app.service.AppRefreshCoordinator;
-import org.titiplex.app.service.AutoCorrectionService;
-import org.titiplex.app.service.ConlluPreviewService;
-import org.titiplex.app.service.CorpusImportService;
-import org.titiplex.app.service.CorrectedEntryService;
-import org.titiplex.app.service.DesktopExportService;
-import org.titiplex.app.service.RawEntryService;
-import org.titiplex.app.service.RuleService;
+import org.titiplex.app.service.*;
 import org.titiplex.app.ui.common.Dialogs;
 import org.titiplex.app.ui.conllu.ConlluPanel;
 import org.titiplex.app.ui.entry.EntryPanel;
@@ -30,6 +22,8 @@ public class MainFrame extends JFrame {
     private final RawEntryPanel rawEntryPanel;
     private final ConlluPanel conlluPanel;
     private final DesktopExportService exportService;
+
+    private Runnable quitAction = this::dispose;
 
     public MainFrame(
             RuleService ruleService,
@@ -83,6 +77,10 @@ public class MainFrame extends JFrame {
         add(tabs, BorderLayout.CENTER);
         add(buildStatusBar(), BorderLayout.SOUTH);
         setJMenuBar(buildMenuBar());
+    }
+
+    public void setQuitAction(Runnable quitAction) {
+        this.quitAction = quitAction == null ? this::dispose : quitAction;
     }
 
     private JComponent buildStatusBar() {
@@ -147,7 +145,7 @@ public class MainFrame extends JFrame {
         });
 
         JMenuItem quitItem = new JMenuItem("Quit");
-        quitItem.addActionListener(event -> dispose());
+        quitItem.addActionListener(event -> quitAction.run());
 
         JMenuItem aboutItem = new JMenuItem("About");
         aboutItem.addActionListener(event ->

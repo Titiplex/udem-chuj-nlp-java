@@ -175,7 +175,6 @@ public final class RuleEditorPanel extends JPanel {
         );
     }
 
-    @SuppressWarnings("unchecked")
     private String normalizeYamlMetadata(String yamlBody, String stableId, String name, String description) {
         if (yamlBody == null || yamlBody.isBlank()) {
             throw new IllegalArgumentException("YAML body cannot be blank");
@@ -194,6 +193,9 @@ public final class RuleEditorPanel extends JPanel {
         Object rawRules = root.get("rules");
         if (!(rawRules instanceof List<?> rules) || rules.isEmpty()) {
             throw new IllegalArgumentException("YAML body must contain a non-empty 'rules' list");
+        }
+        if (rules.size() != 1) {
+            throw new IllegalArgumentException("Desktop rule editor expects exactly one rule in the YAML body.");
         }
 
         Object firstRuleRaw = rules.get(0);
