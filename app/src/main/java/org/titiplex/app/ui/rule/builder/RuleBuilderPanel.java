@@ -2,6 +2,7 @@ package org.titiplex.app.ui.rule.builder;
 
 import org.titiplex.app.persistence.entity.RuleKind;
 import org.titiplex.app.ui.common.Dialogs;
+import org.titiplex.app.ui.rule.builder.support.*;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
@@ -9,8 +10,10 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class RuleBuilderPanel extends JPanel {
     private final JComboBox<RuleKind> kindBox = new JComboBox<>(RuleKind.values());
@@ -24,7 +27,7 @@ public final class RuleBuilderPanel extends JPanel {
     private final CardLayout rootCardLayout = new CardLayout();
     private final JPanel rootCards = new JPanel(rootCardLayout);
 
-    // ---------- correction ----------
+    // correction
     private final JComboBox<String> correctionActionBox = new JComboBox<>(new String[]{
             "rewrite_before_after",
             "rewrite_gloss_only",
@@ -36,70 +39,44 @@ public final class RuleBuilderPanel extends JPanel {
             "insert_segment",
             "merge_tokens"
     });
+    private final JComboBox<String> regexScopeBox = new JComboBox<>(new String[]{"chuj", "gloss"});
+    private final JCheckBox regexIgnoreCaseBox = new JCheckBox("Ignore case");
+    private final JTextField surfaceBeforeField = new JTextField();
+    private final JTextField surfaceAfterField = new JTextField();
+    private final JTextField glossBeforeField = new JTextField();
+    private final JTextField glossAfterField = new JTextField();
+    private final JTextField regexPatternField = new JTextField();
+    private final JTextField regexReplacementField = new JTextField();
+    private final JTextField splitSuffixesField = new JTextField();
+    private final JComboBox<String> glossPlacementBox = new JComboBox<>(new String[]{"right", "left"});
+    private final StringListTablePanel splitGlossLastStartsWithPanel = new StringListTablePanel("gloss_last_match.starts_with", "Value");
+    private final JTextField deleteValuesField = new JTextField();
+    private final JTextField insertSegmentField = new JTextField();
+    private final JSpinner insertTokenSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
+    private final JSpinner insertPositionSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
 
-    private final JComboBox<String> correctionRegexScopeBox = new JComboBox<>(new String[]{
-            "chuj", "gloss"
-    });
-    private final JCheckBox correctionRegexIgnoreCaseBox = new JCheckBox("Ignore case");
+    private final StringListTablePanel matchGlossPanel = new StringListTablePanel("match.gloss", "Gloss");
+    private final StringListTablePanel matchGlossStartsWithPanel = new StringListTablePanel("match.gloss.starts_with", "Prefix");
+    private final JTextField matchGlossInLexiconField = new JTextField();
 
-    private final JTextField correctionBeforeField = new JTextField();
-    private final JTextField correctionAfterField = new JTextField();
-    private final JTextField correctionGlossBeforeField = new JTextField();
-    private final JTextField correctionGlossAfterField = new JTextField();
+    private final StringListTablePanel matchTokensIswordPanel = new StringListTablePanel("tokens.isword", "Token");
+    private final StringListTablePanel matchTokensAnyPanel = new StringListTablePanel("tokens.any", "Token");
+    private final StringListTablePanel matchTokensStartsWithPanel = new StringListTablePanel("tokens.startswith", "Prefix");
+    private final StringListTablePanel matchTokensEndsWithPanel = new StringListTablePanel("tokens.endswith", "Suffix");
+    private final StringListTablePanel matchTokensHasSegmentPanel = new StringListTablePanel("tokens.has_segment", "Segment");
+    private final JCheckBox matchStartsWithVowelBox = new JCheckBox("tokens.startswith_vowel");
+    private final TokenSequenceTablePanel matchTokenSequencesPanel = new TokenSequenceTablePanel("match token sequences");
 
-    private final JTextField correctionRegexPatternField = new JTextField();
-    private final JTextField correctionRegexReplacementField = new JTextField();
+    private final JTextField surfaceSideField = new JTextField();
+    private final JTextField surfaceRootInLexiconField = new JTextField();
+    private final JCheckBox surfaceRootStartsWithVowelBox = new JCheckBox("surface.root_startswith_vowel");
+    private final JCheckBox useBetweenLengthBox = new JCheckBox("Use between.length");
+    private final JSpinner betweenLengthSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 100, 1));
+    private final JTextField targetsField = new JTextField();
 
-    private final JComboBox<String> correctionSplitTypeBox = new JComboBox<>(new String[]{
-            "suffix", "end", "suffix_with_final_gloss"
-    });
-    private final JTextField correctionSplitSuffixesField = new JTextField();
-    private final JComboBox<String> correctionGlossPlacementBox = new JComboBox<>(new String[]{
-            "right", "left"
-    });
-    private final JTextField correctionGlossLastStartsWithField = new JTextField();
+    private final TokenSequenceTablePanel mergeSequencesPanel = new TokenSequenceTablePanel("merge.match.tokens");
 
-    private final JComboBox<String> correctionDeleteTypeBox = new JComboBox<>(new String[]{
-            "chars", "part"
-    });
-    private final JTextField correctionDeleteCharsField = new JTextField();
-
-    private final JTextField correctionInsertSegmentField = new JTextField();
-    private final JSpinner correctionInsertTokenSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
-    private final JSpinner correctionInsertPositionSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
-
-    private final JTextArea correctionMergeTokenSequencesArea = new JTextArea(4, 40);
-
-    // correction match
-    private final JTextField correctionMatchGlossField = new JTextField();
-    private final JTextField correctionMatchGlossStartsWithField = new JTextField();
-    private final JTextField correctionMatchGlossInLexiconField = new JTextField();
-
-    private final JTextField correctionMatchTokenIswordField = new JTextField();
-    private final JTextField correctionMatchTokenAnyField = new JTextField();
-    private final JTextField correctionMatchTokenStartsWithField = new JTextField();
-    private final JTextField correctionMatchTokenEndsWithField = new JTextField();
-    private final JTextField correctionMatchTokenHasSegmentField = new JTextField();
-    private final JCheckBox correctionMatchStartsWithVowelBox = new JCheckBox("tokens.startswith_vowel");
-
-    private final JTextArea correctionMatchTokenSequencesArea = new JTextArea(4, 40);
-
-    private final JTextField correctionSurfaceSideField = new JTextField();
-    private final JTextField correctionSurfaceRootInLexiconField = new JTextField();
-    private final JCheckBox correctionSurfaceRootStartsWithVowelBox = new JCheckBox("surface.root_startswith_vowel");
-
-    private final JSpinner correctionBetweenLengthSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 100, 1));
-    private final JCheckBox correctionUseBetweenLengthBox = new JCheckBox("Use between.length");
-    private final JTextField correctionTargetsField = new JTextField();
-
-    private final JPanel correctionRewritePanel = new JPanel(new GridBagLayout());
-    private final JPanel correctionRegexPanel = new JPanel(new GridBagLayout());
-    private final JPanel correctionSplitPanel = new JPanel(new GridBagLayout());
-    private final JPanel correctionDeletePanel = new JPanel(new GridBagLayout());
-    private final JPanel correctionInsertPanel = new JPanel(new GridBagLayout());
-    private final JPanel correctionMergePanel = new JPanel(new GridBagLayout());
-
-    // ---------- conllu ----------
+    // conllu rule
     private final JComboBox<String> conlluModeBox = new JComboBox<>(new String[]{
             "rule_upos",
             "rule_feats",
@@ -107,51 +84,41 @@ public final class RuleBuilderPanel extends JPanel {
             "rule_full",
             "global_config"
     });
-
-    private final JComboBox<String> conlluScopeBox = new JComboBox<>(new String[]{
-            "token", "morpheme"
-    });
+    private final JComboBox<String> conlluScopeBox = new JComboBox<>(new String[]{"token", "morpheme"});
     private final JSpinner conlluPrioritySpinner = new JSpinner(new SpinnerNumberModel(0, -100, 1000, 1));
-
     private final JTextField conlluMatchRegexField = new JTextField();
-    private final JTextField conlluMatchInListField = new JTextField();
-    private final JTextField conlluMatchRequireField = new JTextField();
-    private final JTextField conlluMatchForbidField = new JTextField();
-
     private final JTextField conlluMatchGlossLiteralField = new JTextField();
     private final JTextField conlluMatchGlossRegexField = new JTextField();
     private final JTextField conlluMatchGlossInLexiconField = new JTextField();
-    private final JTextField conlluMatchGlossInListField = new JTextField();
-    private final JTextField conlluMatchGlossRequireField = new JTextField();
-    private final JTextField conlluMatchGlossForbidField = new JTextField();
 
-    private final JTextArea conlluMatchExtractArea = new JTextArea(4, 40);
-
+    private final StringListTablePanel conlluMatchInListPanel = new StringListTablePanel("match.in_list", "Value / file");
+    private final StringListTablePanel conlluMatchRequirePanel = new StringListTablePanel("match.require", "Value");
+    private final StringListTablePanel conlluMatchForbidPanel = new StringListTablePanel("match.forbid", "Value");
+    private final StringListTablePanel conlluMatchGlossInListPanel = new StringListTablePanel("match.gloss.in_list", "Value / file");
+    private final StringListTablePanel conlluMatchGlossRequirePanel = new StringListTablePanel("match.gloss.require", "Value");
+    private final StringListTablePanel conlluMatchGlossForbidPanel = new StringListTablePanel("match.gloss.forbid", "Value");
+    private final ExtractSpecTablePanel conlluMatchExtractPanel = new ExtractSpecTablePanel("match.extract");
     private final JTextField conlluSetUposField = new JTextField();
-    private final JTextArea conlluFeatsArea = new JTextArea(5, 40);
-    private final JTextArea conlluFeatsTemplateArea = new JTextArea(5, 40);
-    private final JTextArea conlluSetExtractArea = new JTextArea(4, 40);
+    private final KeyValueTablePanel conlluFeatsPanel = new KeyValueTablePanel("set.feats", "Feat", "Value");
+    private final KeyValueTablePanel conlluFeatsTemplatePanel = new KeyValueTablePanel("set.feats_template", "Feat", "Template");
+    private final ExtractSpecTablePanel conlluSetExtractPanel = new ExtractSpecTablePanel("set.extract");
 
-    // globals
-    private final JTextField conlluLexiconNameField = new JTextField();
-    private final JTextField conlluLexiconFileField = new JTextField();
-    private final JTextArea conlluDefPosArea = new JTextArea(4, 40);
-    private final JTextArea conlluDefFeatsArea = new JTextArea(4, 40);
-    private final JTextArea conlluGlossMapPosArea = new JTextArea(5, 40);
-    private final JTextArea conlluGlossMapFeatsArea = new JTextArea(5, 40);
-    private final JTextField conlluExtractorNameField = new JTextField("agreement_verbs");
-    private final JTextArea conlluExtractorSeriesArea = new JTextArea(4, 40);
-    private final JTextArea conlluExtractorPersonsArea = new JTextArea(3, 40);
-    private final JTextField conlluExtractorNumberSuffixField = new JTextField("PL");
-    private final JTextArea conlluExtractorRoutingArea = new JTextArea(5, 40);
-    private final JTextArea conlluExtractorsFileArea = new JTextArea(4, 40);
-    private final JTextArea conlluRulesFileArea = new JTextArea(4, 40);
-
-    private final JPanel conlluRulePanel = new JPanel(new GridBagLayout());
-    private final JPanel conlluGlobalPanel = new JPanel(new GridBagLayout());
+    // conllu globals
+    private final JTextField lexiconNameField = new JTextField();
+    private final JTextField lexiconFileField = new JTextField();
+    private final StringListTablePanel defPosPanel = new StringListTablePanel("def.pos", "POS");
+    private final StringListTablePanel defFeatsPanel = new StringListTablePanel("def.feats", "Feature");
+    private final KeyValueTablePanel glossMapPosPanel = new KeyValueTablePanel("gloss_map.pos", "Gloss", "UPOS");
+    private final GlossFeatMapTablePanel glossMapFeatsPanel = new GlossFeatMapTablePanel("gloss_map.feats");
+    private final JTextField extractorNameField = new JTextField("agreement_verbs");
+    private final KeyValueTablePanel extractorSeriesPanel = new KeyValueTablePanel("extractor series", "Series", "Role");
+    private final StringListTablePanel extractorPersonsPanel = new StringListTablePanel("extractor persons", "Person");
+    private final JTextField extractorNumberSuffixField = new JTextField("PL");
+    private final RoutingRuleTablePanel routingRulePanel = new RoutingRuleTablePanel("routing");
+    private final StringListTablePanel extractorsFilePanel = new StringListTablePanel("extractors_file", "Path");
+    private final StringListTablePanel rulesFilePanel = new StringListTablePanel("rules_file", "Path");
 
     private Runnable loadIntoEditorAction;
-
     private final Yaml yaml;
 
     public RuleBuilderPanel() {
@@ -169,29 +136,7 @@ public final class RuleBuilderPanel extends JPanel {
         previewArea.setEditable(false);
         previewArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
 
-        correctionMergeTokenSequencesArea.setLineWrap(true);
-        correctionMergeTokenSequencesArea.setWrapStyleWord(true);
-        correctionMatchTokenSequencesArea.setLineWrap(true);
-        correctionMatchTokenSequencesArea.setWrapStyleWord(true);
-
-        conlluMatchExtractArea.setLineWrap(true);
-        conlluFeatsArea.setLineWrap(true);
-        conlluFeatsTemplateArea.setLineWrap(true);
-        conlluSetExtractArea.setLineWrap(true);
-        conlluDefPosArea.setLineWrap(true);
-        conlluDefFeatsArea.setLineWrap(true);
-        conlluGlossMapPosArea.setLineWrap(true);
-        conlluGlossMapFeatsArea.setLineWrap(true);
-        conlluExtractorSeriesArea.setLineWrap(true);
-        conlluExtractorPersonsArea.setLineWrap(true);
-        conlluExtractorRoutingArea.setLineWrap(true);
-        conlluExtractorsFileArea.setLineWrap(true);
-        conlluRulesFileArea.setLineWrap(true);
-
-        errorLabel.setForeground(new Color(180, 60, 60));
-
-        buildCorrectionPanels();
-        buildConlluPanels();
+        errorLabel.setForeground(new Color(190, 70, 70));
 
         rootCards.add(buildCorrectionCard(), RuleKind.CORRECTION.name());
         rootCards.add(buildConlluCard(), RuleKind.CONLLU.name());
@@ -206,9 +151,9 @@ public final class RuleBuilderPanel extends JPanel {
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         JButton previewButton = new JButton("Generate preview");
-        previewButton.addActionListener(event -> safelyGeneratePreview(true));
+        previewButton.addActionListener(e -> safelyGeneratePreview(true));
         JButton loadButton = new JButton("Load into YAML editor");
-        loadButton.addActionListener(event -> safelyLoadIntoEditor());
+        loadButton.addActionListener(e -> safelyLoadIntoEditor());
 
         actions.add(previewButton);
         actions.add(Box.createHorizontalStrut(8));
@@ -230,16 +175,14 @@ public final class RuleBuilderPanel extends JPanel {
         previewScroll.setBorder(BorderFactory.createTitledBorder("YAML preview"));
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, formScroll, previewScroll);
-        splitPane.setResizeWeight(0.70);
+        splitPane.setResizeWeight(0.72);
         splitPane.setOneTouchExpandable(true);
 
         add(splitPane, BorderLayout.CENTER);
 
-        kindBox.addActionListener(event -> refreshFieldVisibility());
-        correctionActionBox.addActionListener(event -> refreshFieldVisibility());
-        correctionSplitTypeBox.addActionListener(event -> refreshFieldVisibility());
-        correctionDeleteTypeBox.addActionListener(event -> refreshFieldVisibility());
-        conlluModeBox.addActionListener(event -> refreshFieldVisibility());
+        kindBox.addActionListener(e -> refreshFieldVisibility());
+        correctionActionBox.addActionListener(e -> refreshFieldVisibility());
+        conlluModeBox.addActionListener(e -> refreshFieldVisibility());
 
         refreshFieldVisibility();
     }
@@ -259,8 +202,8 @@ public final class RuleBuilderPanel extends JPanel {
     private JPanel buildMetaPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(BorderFactory.createTitledBorder("Guided rule builder"));
-        GridBagConstraints c = baseConstraints();
 
+        GridBagConstraints c = baseConstraints();
         addRow(panel, c, 0, "Rule kind", kindBox);
         addRow(panel, c, 1, "Rule id", idField);
         addRow(panel, c, 2, "Name", nameField);
@@ -273,250 +216,108 @@ public final class RuleBuilderPanel extends JPanel {
     }
 
     private JPanel buildCorrectionCard() {
-        JPanel panel = new JPanel(new GridBagLayout());
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createTitledBorder("Correction rule"));
-        GridBagConstraints c = baseConstraints();
 
-        addRow(panel, c, 0, "Action", correctionActionBox);
-        addCorrectionMatchPanel(panel, c, 1);
+        panel.add(labeledLine("Action", correctionActionBox));
+        panel.add(matchGlossPanel);
+        panel.add(matchGlossStartsWithPanel);
+        panel.add(labeledLine("match.gloss.in_lexicon", matchGlossInLexiconField));
+        panel.add(matchTokensIswordPanel);
+        panel.add(matchTokensAnyPanel);
+        panel.add(matchTokensStartsWithPanel);
+        panel.add(matchTokensEndsWithPanel);
+        panel.add(matchTokensHasSegmentPanel);
+        panel.add(matchStartsWithVowelBox);
+        panel.add(matchTokenSequencesPanel);
+        panel.add(labeledLine("surface.side", surfaceSideField));
+        panel.add(labeledLine("surface.root_in_lexicon", surfaceRootInLexiconField));
+        panel.add(surfaceRootStartsWithVowelBox);
+        panel.add(useBetweenLengthBox);
+        panel.add(labeledLine("between.length", betweenLengthSpinner));
+        panel.add(labeledLine("targets", targetsField));
 
-        c.gridx = 0;
-        c.gridy = 2;
-        c.gridwidth = 2;
-        panel.add(correctionRewritePanel, c);
-
-        c.gridy = 3;
-        panel.add(correctionRegexPanel, c);
-
-        c.gridy = 4;
-        panel.add(correctionSplitPanel, c);
-
-        c.gridy = 5;
-        panel.add(correctionDeletePanel, c);
-
-        c.gridy = 6;
-        panel.add(correctionInsertPanel, c);
-
-        c.gridy = 7;
-        panel.add(correctionMergePanel, c);
-
-        c.gridy = 8;
-        c.weighty = 1;
-        c.fill = GridBagConstraints.BOTH;
-        panel.add(Box.createVerticalGlue(), c);
+        panel.add(labeledLine("regex scope", regexScopeBox));
+        panel.add(regexIgnoreCaseBox);
+        panel.add(labeledLine("surface before (csv)", surfaceBeforeField));
+        panel.add(labeledLine("surface after (csv)", surfaceAfterField));
+        panel.add(labeledLine("gloss before (csv)", glossBeforeField));
+        panel.add(labeledLine("gloss after (csv)", glossAfterField));
+        panel.add(labeledLine("regex pattern", regexPatternField));
+        panel.add(labeledLine("regex replacement", regexReplacementField));
+        panel.add(labeledLine("split suffixes (csv)", splitSuffixesField));
+        panel.add(labeledLine("gloss placement", glossPlacementBox));
+        panel.add(splitGlossLastStartsWithPanel);
+        panel.add(labeledLine("delete values (csv)", deleteValuesField));
+        panel.add(labeledLine("insert segment", insertSegmentField));
+        panel.add(labeledLine("insert token", insertTokenSpinner));
+        panel.add(labeledLine("insert position", insertPositionSpinner));
+        panel.add(mergeSequencesPanel);
 
         return panel;
     }
 
     private JPanel buildConlluCard() {
-        JPanel panel = new JPanel(new GridBagLayout());
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createTitledBorder("CoNLL-U"));
-        GridBagConstraints c = baseConstraints();
 
-        addRow(panel, c, 0, "Mode", conlluModeBox);
+        panel.add(labeledLine("Mode", conlluModeBox));
+        panel.add(labeledLine("Scope", conlluScopeBox));
+        panel.add(labeledLine("Priority", conlluPrioritySpinner));
+        panel.add(labeledLine("match.regex", conlluMatchRegexField));
+        panel.add(labeledLine("match.gloss literal", conlluMatchGlossLiteralField));
+        panel.add(labeledLine("match.gloss.regex", conlluMatchGlossRegexField));
+        panel.add(labeledLine("match.gloss.in_lexicon", conlluMatchGlossInLexiconField));
 
-        c.gridx = 0;
-        c.gridy = 1;
-        c.gridwidth = 2;
-        c.weightx = 1;
-        panel.add(conlluRulePanel, c);
+        panel.add(conlluMatchInListPanel);
+        panel.add(conlluMatchRequirePanel);
+        panel.add(conlluMatchForbidPanel);
+        panel.add(conlluMatchGlossInListPanel);
+        panel.add(conlluMatchGlossRequirePanel);
+        panel.add(conlluMatchGlossForbidPanel);
+        panel.add(conlluMatchExtractPanel);
 
-        c.gridy = 2;
-        panel.add(conlluGlobalPanel, c);
+        panel.add(labeledLine("set.upos", conlluSetUposField));
+        panel.add(conlluFeatsPanel);
+        panel.add(conlluFeatsTemplatePanel);
+        panel.add(conlluSetExtractPanel);
 
-        c.gridy = 3;
-        c.weighty = 1;
-        c.fill = GridBagConstraints.BOTH;
-        panel.add(Box.createVerticalGlue(), c);
+        panel.add(labeledLine("lexicon name", lexiconNameField));
+
+        JPanel lexiconFilePanel = new JPanel(new BorderLayout(6, 0));
+        lexiconFilePanel.add(lexiconFileField, BorderLayout.CENTER);
+        JButton browseLexiconButton = new JButton("Browse...");
+        browseLexiconButton.addActionListener(e -> chooseFileInto(lexiconFileField));
+        lexiconFilePanel.add(browseLexiconButton, BorderLayout.EAST);
+        panel.add(labeledLine("lexicon file", lexiconFilePanel));
+
+        panel.add(defPosPanel);
+        panel.add(defFeatsPanel);
+        panel.add(glossMapPosPanel);
+        panel.add(glossMapFeatsPanel);
+        panel.add(labeledLine("extractor name", extractorNameField));
+        panel.add(extractorSeriesPanel);
+        panel.add(extractorPersonsPanel);
+        panel.add(labeledLine("extractor number suffix", extractorNumberSuffixField));
+        panel.add(routingRulePanel);
+        panel.add(extractorsFilePanel);
+        panel.add(rulesFilePanel);
 
         return panel;
     }
 
-    private void buildCorrectionPanels() {
-        correctionRewritePanel.setBorder(BorderFactory.createTitledBorder("Rewrite"));
-        GridBagConstraints c1 = baseConstraints();
-        addRow(correctionRewritePanel, c1, 0, "Surface before (csv)", correctionBeforeField);
-        addRow(correctionRewritePanel, c1, 1, "Surface after (csv)", correctionAfterField);
-        addRow(correctionRewritePanel, c1, 2, "Gloss before (csv)", correctionGlossBeforeField);
-        addRow(correctionRewritePanel, c1, 3, "Gloss after (csv)", correctionGlossAfterField);
-
-        correctionRegexPanel.setBorder(BorderFactory.createTitledBorder("Regex"));
-        GridBagConstraints c2 = baseConstraints();
-        addRow(correctionRegexPanel, c2, 0, "Scope", correctionRegexScopeBox);
-        addRow(correctionRegexPanel, c2, 1, "Pattern", correctionRegexPatternField);
-        addRow(correctionRegexPanel, c2, 2, "Replacement", correctionRegexReplacementField);
-        addRow(correctionRegexPanel, c2, 3, "", correctionRegexIgnoreCaseBox);
-
-        correctionSplitPanel.setBorder(BorderFactory.createTitledBorder("Split"));
-        GridBagConstraints c3 = baseConstraints();
-        addRow(correctionSplitPanel, c3, 0, "Split type", correctionSplitTypeBox);
-        addRow(correctionSplitPanel, c3, 1, "Suffixes / tokens (csv)", correctionSplitSuffixesField);
-        addRow(correctionSplitPanel, c3, 2, "Gloss placement", correctionGlossPlacementBox);
-        addRow(correctionSplitPanel, c3, 3, "gloss_last_match.starts_with (csv)", correctionGlossLastStartsWithField);
-
-        correctionDeletePanel.setBorder(BorderFactory.createTitledBorder("Delete"));
-        GridBagConstraints c4 = baseConstraints();
-        addRow(correctionDeletePanel, c4, 0, "Delete type", correctionDeleteTypeBox);
-        addRow(correctionDeletePanel, c4, 1, "Chars / parts (csv)", correctionDeleteCharsField);
-
-        correctionInsertPanel.setBorder(BorderFactory.createTitledBorder("Insert"));
-        GridBagConstraints c5 = baseConstraints();
-        addRow(correctionInsertPanel, c5, 0, "Segment", correctionInsertSegmentField);
-        addRow(correctionInsertPanel, c5, 1, "Token index", correctionInsertTokenSpinner);
-        addRow(correctionInsertPanel, c5, 2, "Position", correctionInsertPositionSpinner);
-
-        correctionMergePanel.setBorder(BorderFactory.createTitledBorder("Merge"));
-        GridBagConstraints c6 = baseConstraints();
-        JScrollPane seqScroll = new JScrollPane(correctionMergeTokenSequencesArea);
-        seqScroll.setPreferredSize(new Dimension(220, 90));
-        addRow(correctionMergePanel, c6, 0, "Token sequences (one seq per line, csv)", seqScroll);
-    }
-
-    private void addCorrectionMatchPanel(JPanel parent, GridBagConstraints c, int row) {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Match"));
-        GridBagConstraints mc = baseConstraints();
-
-        addRow(panel, mc, 0, "Gloss literal(s) (csv)", correctionMatchGlossField);
-        addRow(panel, mc, 1, "gloss.starts_with (csv)", correctionMatchGlossStartsWithField);
-        addRow(panel, mc, 2, "gloss.in_lexicon", correctionMatchGlossInLexiconField);
-
-        addRow(panel, mc, 3, "tokens.isword (csv)", correctionMatchTokenIswordField);
-        addRow(panel, mc, 4, "tokens.any (csv)", correctionMatchTokenAnyField);
-        addRow(panel, mc, 5, "tokens.startswith (csv)", correctionMatchTokenStartsWithField);
-        addRow(panel, mc, 6, "tokens.endswith (csv)", correctionMatchTokenEndsWithField);
-        addRow(panel, mc, 7, "tokens.has_segment (csv)", correctionMatchTokenHasSegmentField);
-        addRow(panel, mc, 8, "", correctionMatchStartsWithVowelBox);
-
-        JScrollPane tokenSeqScroll = new JScrollPane(correctionMatchTokenSequencesArea);
-        tokenSeqScroll.setPreferredSize(new Dimension(220, 90));
-        addRow(panel, mc, 9, "token sequences (one seq per line, csv)", tokenSeqScroll);
-
-        addRow(panel, mc, 10, "surface.side", correctionSurfaceSideField);
-        addRow(panel, mc, 11, "surface.root_in_lexicon", correctionSurfaceRootInLexiconField);
-        addRow(panel, mc, 12, "", correctionSurfaceRootStartsWithVowelBox);
-
-        addRow(panel, mc, 13, "", correctionUseBetweenLengthBox);
-        addRow(panel, mc, 14, "between.length", correctionBetweenLengthSpinner);
-        addRow(panel, mc, 15, "targets", correctionTargetsField);
-
-        c.gridx = 0;
-        c.gridy = row;
-        c.gridwidth = 2;
-        c.weightx = 1;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        parent.add(panel, c);
-    }
-
-    private void buildConlluPanels() {
-        conlluRulePanel.setBorder(BorderFactory.createTitledBorder("Rule"));
-        GridBagConstraints c1 = baseConstraints();
-
-        addRow(conlluRulePanel, c1, 0, "Scope", conlluScopeBox);
-        addRow(conlluRulePanel, c1, 1, "Priority", conlluPrioritySpinner);
-        addRow(conlluRulePanel, c1, 2, "match.regex", conlluMatchRegexField);
-        addRow(conlluRulePanel, c1, 3, "match.in_list (csv or files)", conlluMatchInListField);
-        addRow(conlluRulePanel, c1, 4, "match.require (csv)", conlluMatchRequireField);
-        addRow(conlluRulePanel, c1, 5, "match.forbid (csv)", conlluMatchForbidField);
-
-        addRow(conlluRulePanel, c1, 6, "match.gloss literal", conlluMatchGlossLiteralField);
-        addRow(conlluRulePanel, c1, 7, "match.gloss.regex", conlluMatchGlossRegexField);
-        addRow(conlluRulePanel, c1, 8, "match.gloss.in_lexicon", conlluMatchGlossInLexiconField);
-        addRow(conlluRulePanel, c1, 9, "match.gloss.in_list (csv or files)", conlluMatchGlossInListField);
-        addRow(conlluRulePanel, c1, 10, "match.gloss.require (csv)", conlluMatchGlossRequireField);
-        addRow(conlluRulePanel, c1, 11, "match.gloss.forbid (csv)", conlluMatchGlossForbidField);
-
-        JScrollPane matchExtractScroll = new JScrollPane(conlluMatchExtractArea);
-        matchExtractScroll.setPreferredSize(new Dimension(220, 90));
-        addRow(conlluRulePanel, c1, 12, "match.extract (type=...,key=... per line)", matchExtractScroll);
-
-        addRow(conlluRulePanel, c1, 13, "set.upos", conlluSetUposField);
-
-        JScrollPane featsScroll = new JScrollPane(conlluFeatsArea);
-        featsScroll.setPreferredSize(new Dimension(220, 90));
-        addRow(conlluRulePanel, c1, 14, "set.feats (key=value per line)", featsScroll);
-
-        JScrollPane featsTplScroll = new JScrollPane(conlluFeatsTemplateArea);
-        featsTplScroll.setPreferredSize(new Dimension(220, 90));
-        addRow(conlluRulePanel, c1, 15, "set.feats_template (key=value per line)", featsTplScroll);
-
-        JScrollPane setExtractScroll = new JScrollPane(conlluSetExtractArea);
-        setExtractScroll.setPreferredSize(new Dimension(220, 90));
-        addRow(conlluRulePanel, c1, 16, "set.extract (type=...,key=... per line)", setExtractScroll);
-
-        conlluGlobalPanel.setBorder(BorderFactory.createTitledBorder("Global config"));
-        GridBagConstraints c2 = baseConstraints();
-
-        JPanel lexiconFilePanel = new JPanel(new BorderLayout(6, 0));
-        lexiconFilePanel.add(conlluLexiconFileField, BorderLayout.CENTER);
-        JButton browseLexiconButton = new JButton("Browse...");
-        browseLexiconButton.addActionListener(event -> chooseFileInto(conlluLexiconFileField));
-        lexiconFilePanel.add(browseLexiconButton, BorderLayout.EAST);
-
-        addRow(conlluGlobalPanel, c2, 0, "lexicon name", conlluLexiconNameField);
-        addRow(conlluGlobalPanel, c2, 1, "lexicon file", lexiconFilePanel);
-
-        JScrollPane defPosScroll = new JScrollPane(conlluDefPosArea);
-        defPosScroll.setPreferredSize(new Dimension(220, 70));
-        addRow(conlluGlobalPanel, c2, 2, "def.pos (csv/lines)", defPosScroll);
-
-        JScrollPane defFeatScroll = new JScrollPane(conlluDefFeatsArea);
-        defFeatScroll.setPreferredSize(new Dimension(220, 70));
-        addRow(conlluGlobalPanel, c2, 3, "def.feats (csv/lines)", defFeatScroll);
-
-        JScrollPane gmPosScroll = new JScrollPane(conlluGlossMapPosArea);
-        gmPosScroll.setPreferredSize(new Dimension(220, 90));
-        addRow(conlluGlobalPanel, c2, 4, "gloss_map.pos (GLOSS=UPOS per line)", gmPosScroll);
-
-        JScrollPane gmFeatScroll = new JScrollPane(conlluGlossMapFeatsArea);
-        gmFeatScroll.setPreferredSize(new Dimension(220, 90));
-        addRow(conlluGlobalPanel, c2, 5, "gloss_map.feats (GLOSS=Feat:Value per line)", gmFeatScroll);
-
-        addRow(conlluGlobalPanel, c2, 6, "extractor name", conlluExtractorNameField);
-
-        JScrollPane seriesScroll = new JScrollPane(conlluExtractorSeriesArea);
-        seriesScroll.setPreferredSize(new Dimension(220, 70));
-        addRow(conlluGlobalPanel, c2, 7, "extractor series (A=ERG per line)", seriesScroll);
-
-        JScrollPane personsScroll = new JScrollPane(conlluExtractorPersonsArea);
-        personsScroll.setPreferredSize(new Dimension(220, 55));
-        addRow(conlluGlobalPanel, c2, 8, "extractor persons (csv)", personsScroll);
-
-        addRow(conlluGlobalPanel, c2, 9, "extractor number suffix", conlluExtractorNumberSuffixField);
-
-        JScrollPane routingScroll = new JScrollPane(conlluExtractorRoutingArea);
-        routingScroll.setPreferredSize(new Dimension(220, 90));
-        addRow(conlluGlobalPanel, c2, 10, "routing (when => key=value;key=value)", routingScroll);
-
-        JScrollPane extractorsFileScroll = new JScrollPane(conlluExtractorsFileArea);
-        extractorsFileScroll.setPreferredSize(new Dimension(220, 70));
-        addRow(conlluGlobalPanel, c2, 11, "extractors_file", extractorsFileScroll);
-
-        JScrollPane rulesFileScroll = new JScrollPane(conlluRulesFileArea);
-        rulesFileScroll.setPreferredSize(new Dimension(220, 70));
-        addRow(conlluGlobalPanel, c2, 12, "rules_file", rulesFileScroll);
+    private JPanel labeledLine(String label, Component component) {
+        JPanel panel = new JPanel(new BorderLayout(8, 0));
+        panel.setBorder(new EmptyBorder(2, 0, 2, 0));
+        panel.add(new JLabel(label), BorderLayout.WEST);
+        panel.add(component, BorderLayout.CENTER);
+        return panel;
     }
 
     private void refreshFieldVisibility() {
-        RuleKind kind = getSelectedKind();
-        rootCardLayout.show(rootCards, kind.name());
-
-        String action = String.valueOf(correctionActionBox.getSelectedItem());
-        correctionRewritePanel.setVisible("rewrite_before_after".equals(action) || "rewrite_gloss_only".equals(action));
-        correctionRegexPanel.setVisible("regex_sub".equals(action));
-        correctionSplitPanel.setVisible("split_suffix".equals(action) || "split_suffix_with_final_gloss".equals(action));
-        correctionDeletePanel.setVisible("delete_chars".equals(action) || "delete_part".equals(action));
-        correctionInsertPanel.setVisible("insert_segment".equals(action));
-        correctionMergePanel.setVisible("merge_tokens".equals(action));
-
-        boolean suffixFinal = "split_suffix_with_final_gloss".equals(action);
-        correctionSplitTypeBox.setSelectedItem(suffixFinal ? "suffix_with_final_gloss" : "suffix");
-        correctionGlossLastStartsWithField.setEnabled(suffixFinal);
-
-        String mode = String.valueOf(conlluModeBox.getSelectedItem());
-        conlluRulePanel.setVisible(!"global_config".equals(mode));
-        conlluGlobalPanel.setVisible("global_config".equals(mode) || "rule_full".equals(mode));
-
+        rootCardLayout.show(rootCards, getSelectedKind().name());
         revalidate();
         repaint();
     }
@@ -549,98 +350,85 @@ public final class RuleBuilderPanel extends JPanel {
     }
 
     private String generateCorrectionYaml() {
+        Map<String, Object> root = new LinkedHashMap<>();
         Map<String, Object> rule = baseRuleMap();
 
+        String action = String.valueOf(correctionActionBox.getSelectedItem());
         Map<String, Object> rewrite = new LinkedHashMap<>();
         Map<String, Object> merge = new LinkedHashMap<>();
-        Map<String, Object> match = buildCorrectionMatch();
 
+        Map<String, Object> match = buildCorrectionMatch();
         if (!match.isEmpty()) {
             rewrite.put("match", match);
         }
 
-        String action = String.valueOf(correctionActionBox.getSelectedItem());
-
         switch (action) {
             case "rewrite_before_after" -> {
-                putCsvIfPresent(rewrite, "before", correctionBeforeField.getText());
-                putCsvIfPresent(rewrite, "after", correctionAfterField.getText());
-
+                putCsvIfPresent(rewrite, "before", surfaceBeforeField.getText());
+                putCsvIfPresent(rewrite, "after", surfaceAfterField.getText());
                 Map<String, Object> gloss = new LinkedHashMap<>();
-                putCsvIfPresent(gloss, "before", correctionGlossBeforeField.getText());
-                putCsvIfPresent(gloss, "after", correctionGlossAfterField.getText());
-                if (!gloss.isEmpty()) {
-                    rewrite.put("gloss", gloss);
-                }
-
-                if (!rewrite.containsKey("before") && !rewrite.containsKey("after") && !rewrite.containsKey("gloss")) {
-                    throw new IllegalArgumentException("At least one rewrite field must be filled.");
-                }
+                putCsvIfPresent(gloss, "before", glossBeforeField.getText());
+                putCsvIfPresent(gloss, "after", glossAfterField.getText());
+                if (!gloss.isEmpty()) rewrite.put("gloss", gloss);
             }
             case "rewrite_gloss_only" -> {
                 Map<String, Object> gloss = new LinkedHashMap<>();
-                gloss.put("before", csvRequired(correctionGlossBeforeField.getText(), "Gloss before cannot be blank"));
-                gloss.put("after", csvRequired(correctionGlossAfterField.getText(), "Gloss after cannot be blank"));
+                gloss.put("before", csvRequired(glossBeforeField.getText(), "Gloss before cannot be blank"));
+                gloss.put("after", csvRequired(glossAfterField.getText(), "Gloss after cannot be blank"));
                 rewrite.put("gloss", gloss);
             }
             case "regex_sub" -> {
                 Map<String, Object> regexSub = new LinkedHashMap<>();
-                regexSub.put("scope", String.valueOf(correctionRegexScopeBox.getSelectedItem()));
-                regexSub.put("pattern", require(correctionRegexPatternField.getText(), "Regex pattern cannot be blank").trim());
-                regexSub.put("repl", nullToEmpty(correctionRegexReplacementField.getText()).trim());
-                if (correctionRegexIgnoreCaseBox.isSelected()) {
+                regexSub.put("scope", regexScopeBox.getSelectedItem());
+                regexSub.put("pattern", require(regexPatternField.getText(), "Regex pattern cannot be blank").trim());
+                regexSub.put("repl", nullToEmpty(regexReplacementField.getText()).trim());
+                if (regexIgnoreCaseBox.isSelected()) {
                     regexSub.put("ignore_case", true);
                 }
                 rewrite.put("regex_sub", regexSub);
             }
-            case "split_suffix", "split_suffix_with_final_gloss" -> {
+            case "split_suffix" -> {
                 Map<String, Object> split = new LinkedHashMap<>();
-                split.put("type", String.valueOf(correctionSplitTypeBox.getSelectedItem()));
-                split.put("suffixes", csvRequired(correctionSplitSuffixesField.getText(), "Suffixes cannot be blank"));
-                if (!suffixFinalGlossStartsWith().isEmpty()) {
-                    Map<String, Object> gl = new LinkedHashMap<>();
-                    gl.put("starts_with", suffixFinalGlossStartsWith());
-                    split.put("gloss_last_match", gl);
-                }
-                if (!nullToEmpty((String) correctionGlossPlacementBox.getSelectedItem()).isBlank()) {
-                    split.put("gloss_placement", correctionGlossPlacementBox.getSelectedItem());
+                split.put("type", "suffix");
+                split.put("suffixes", csvRequired(splitSuffixesField.getText(), "Suffixes cannot be blank"));
+                split.put("gloss_placement", glossPlacementBox.getSelectedItem());
+                rewrite.put("split", split);
+            }
+            case "split_suffix_with_final_gloss" -> {
+                Map<String, Object> split = new LinkedHashMap<>();
+                split.put("type", "suffix_with_final_gloss");
+                split.put("suffixes", csvRequired(splitSuffixesField.getText(), "Suffixes cannot be blank"));
+                if (!splitGlossLastStartsWithPanel.getValues().isEmpty()) {
+                    split.put("gloss_last_match", Map.of("starts_with", splitGlossLastStartsWithPanel.getValues()));
                 }
                 rewrite.put("split", split);
             }
-            case "delete_chars", "delete_part" -> {
-                Map<String, Object> delete = new LinkedHashMap<>();
-                delete.put("type", String.valueOf(correctionDeleteTypeBox.getSelectedItem()));
-                delete.put("chars", csvRequired(correctionDeleteCharsField.getText(), "Delete values cannot be blank"));
-                rewrite.put("delete", delete);
-            }
-            case "insert_segment" -> {
-                Map<String, Object> insert = new LinkedHashMap<>();
-                insert.put("segment", require(correctionInsertSegmentField.getText(), "Insert segment cannot be blank").trim());
-                insert.put("token", correctionInsertTokenSpinner.getValue());
-                insert.put("position", correctionInsertPositionSpinner.getValue());
-                rewrite.put("insert", insert);
-            }
+            case "delete_chars" -> rewrite.put("delete", Map.of(
+                    "type", "chars",
+                    "chars", csvRequired(deleteValuesField.getText(), "Delete chars cannot be blank")
+            ));
+            case "delete_part" -> rewrite.put("delete", Map.of(
+                    "type", "part",
+                    "chars", csvRequired(deleteValuesField.getText(), "Delete parts cannot be blank")
+            ));
+            case "insert_segment" -> rewrite.put("insert", Map.of(
+                    "segment", require(insertSegmentField.getText(), "Insert segment cannot be blank").trim(),
+                    "token", insertTokenSpinner.getValue(),
+                    "position", insertPositionSpinner.getValue()
+            ));
             case "merge_tokens" -> {
-                List<List<String>> seqs = parseTokenSequenceLines(correctionMergeTokenSequencesArea.getText());
+                List<List<String>> seqs = mergeSequencesPanel.getSequences();
                 if (seqs.isEmpty()) {
                     throw new IllegalArgumentException("At least one merge token sequence is required.");
                 }
-                Map<String, Object> mm = new LinkedHashMap<>();
-                Map<String, Object> mmatch = new LinkedHashMap<>();
-                mmatch.put("tokens", seqs);
-                mm.put("match", mmatch);
-                merge.putAll(mm);
+                merge.put("match", Map.of("tokens", seqs));
             }
             default -> throw new IllegalStateException("Unsupported correction action: " + action);
         }
 
-        Map<String, Object> root = new LinkedHashMap<>();
-        if (!merge.isEmpty()) {
-            rule.put("merge", merge);
-        }
-        if (!rewrite.isEmpty()) {
-            rule.put("rewrite", rewrite);
-        }
+        if (!rewrite.isEmpty()) rule.put("rewrite", rewrite);
+        if (!merge.isEmpty()) rule.put("merge", merge);
+
         root.put("rules", List.of(rule));
         return yaml.dump(root);
     }
@@ -648,64 +436,47 @@ public final class RuleBuilderPanel extends JPanel {
     private Map<String, Object> buildCorrectionMatch() {
         Map<String, Object> match = new LinkedHashMap<>();
 
-        List<String> tokenSequencesFlat = csv(correctionMatchGlossField.getText());
-        if (!tokenSequencesFlat.isEmpty()) {
-            if (tokenSequencesFlat.size() == 1) {
-                match.put("gloss", tokenSequencesFlat.getFirst());
-            } else {
-                match.put("gloss", new ArrayList<>(tokenSequencesFlat));
-            }
+        if (!matchGlossPanel.getValues().isEmpty()) {
+            match.put("gloss", new ArrayList<>(matchGlossPanel.getValues()));
         }
 
-        Map<String, Object> tokenMap = new LinkedHashMap<>();
-        putCsvIfPresent(tokenMap, "isword", correctionMatchTokenIswordField.getText());
-        putCsvIfPresent(tokenMap, "any", correctionMatchTokenAnyField.getText());
-        putCsvIfPresent(tokenMap, "startswith", correctionMatchTokenStartsWithField.getText());
-        putCsvIfPresent(tokenMap, "endswith", correctionMatchTokenEndsWithField.getText());
-        putCsvIfPresent(tokenMap, "has_segment", correctionMatchTokenHasSegmentField.getText());
-        if (correctionMatchStartsWithVowelBox.isSelected()) {
-            tokenMap.put("startswith_vowel", true);
+        Map<String, Object> tokens = new LinkedHashMap<>();
+        putListIfPresent(tokens, "isword", matchTokensIswordPanel.getValues());
+        putListIfPresent(tokens, "any", matchTokensAnyPanel.getValues());
+        putListIfPresent(tokens, "startswith", matchTokensStartsWithPanel.getValues());
+        putListIfPresent(tokens, "endswith", matchTokensEndsWithPanel.getValues());
+        putListIfPresent(tokens, "has_segment", matchTokensHasSegmentPanel.getValues());
+        if (matchStartsWithVowelBox.isSelected()) {
+            tokens.put("startswith_vowel", true);
+        }
+        if (!tokens.isEmpty()) {
+            match.put("tokens", tokens);
+        } else if (!matchTokenSequencesPanel.getSequences().isEmpty()) {
+            match.put("tokens", matchTokenSequencesPanel.getSequences());
         }
 
-        List<List<String>> tokenSeqs = parseTokenSequenceLines(correctionMatchTokenSequencesArea.getText());
-        if (!tokenSeqs.isEmpty()) {
-            if (tokenMap.isEmpty() && tokenSeqs.size() == 1) {
-                match.put("tokens", tokenSeqs.getFirst());
-            } else if (!tokenSeqs.isEmpty()) {
-                match.put("tokens", tokenSeqs);
-            }
-        }
-        if (!tokenMap.isEmpty()) {
-            match.put("tokens", tokenMap);
+        Map<String, Object> gloss = new LinkedHashMap<>();
+        putListIfPresent(gloss, "starts_with", matchGlossStartsWithPanel.getValues());
+        putIfNotBlank(gloss, "in_lexicon", matchGlossInLexiconField.getText());
+        if (!gloss.isEmpty()) {
+            match.put("gloss", gloss);
         }
 
-        Map<String, Object> glossMap = new LinkedHashMap<>();
-        putCsvIfPresent(glossMap, "starts_with", correctionMatchGlossStartsWithField.getText());
-        putIfNotBlank(glossMap, "in_lexicon", correctionMatchGlossInLexiconField.getText());
-        if (!glossMap.isEmpty()) {
-            match.put("gloss", glossMap);
+        Map<String, Object> surface = new LinkedHashMap<>();
+        putIfNotBlank(surface, "side", surfaceSideField.getText());
+        putIfNotBlank(surface, "root_in_lexicon", surfaceRootInLexiconField.getText());
+        if (surfaceRootStartsWithVowelBox.isSelected()) {
+            surface.put("root_startswith_vowel", true);
+        }
+        if (!surface.isEmpty()) {
+            match.put("surface", surface);
         }
 
-        Map<String, Object> surfaceMap = new LinkedHashMap<>();
-        putIfNotBlank(surfaceMap, "side", correctionSurfaceSideField.getText());
-        putIfNotBlank(surfaceMap, "root_in_lexicon", correctionSurfaceRootInLexiconField.getText());
-        if (correctionSurfaceRootStartsWithVowelBox.isSelected()) {
-            surfaceMap.put("root_startswith_vowel", true);
-        }
-        if (!surfaceMap.isEmpty()) {
-            match.put("surface", surfaceMap);
+        if (useBetweenLengthBox.isSelected()) {
+            match.put("between", Map.of("length", betweenLengthSpinner.getValue()));
         }
 
-        if (correctionUseBetweenLengthBox.isSelected()) {
-            Map<String, Object> between = new LinkedHashMap<>();
-            between.put("length", correctionBetweenLengthSpinner.getValue());
-            match.put("between", between);
-        }
-
-        if (!nullToEmpty(correctionTargetsField.getText()).isBlank()) {
-            match.put("targets", correctionTargetsField.getText().trim());
-        }
-
+        putIfNotBlank(match, "targets", targetsField.getText());
         return match;
     }
 
@@ -728,14 +499,10 @@ public final class RuleBuilderPanel extends JPanel {
             }
 
             Map<String, Object> match = buildConlluMatch();
-            if (!match.isEmpty()) {
-                rule.put("match", match);
-            }
+            if (!match.isEmpty()) rule.put("match", match);
 
             Map<String, Object> set = buildConlluSet(mode);
-            if (!set.isEmpty()) {
-                rule.put("set", set);
-            }
+            if (!set.isEmpty()) rule.put("set", set);
 
             root.put("rules", List.of(rule));
         }
@@ -743,80 +510,12 @@ public final class RuleBuilderPanel extends JPanel {
         return yaml.dump(root);
     }
 
-    private void fillConlluGlobals(Map<String, Object> root) {
-        Map<String, Object> def = new LinkedHashMap<>();
-        List<String> pos = csvOrLines(conlluDefPosArea.getText());
-        List<String> feats = csvOrLines(conlluDefFeatsArea.getText());
-        if (!pos.isEmpty()) def.put("pos", new ArrayList<>(pos));
-        if (!feats.isEmpty()) def.put("feats", new ArrayList<>(feats));
-        if (!def.isEmpty()) root.put("def", def);
-
-        if (!nullToEmpty(conlluLexiconNameField.getText()).isBlank() && !nullToEmpty(conlluLexiconFileField.getText()).isBlank()) {
-            Map<String, Object> lexicons = new LinkedHashMap<>();
-            lexicons.put(conlluLexiconNameField.getText().trim(), conlluLexiconFileField.getText().trim());
-            root.put("lexicons", lexicons);
-        }
-
-        Map<String, Object> glossMap = new LinkedHashMap<>();
-        List<Map<String, Object>> posMaps = parseKeyValueMapLines(conlluGlossMapPosArea.getText());
-        List<Map<String, Object>> featMaps = parseFeatGlossMapLines(conlluGlossMapFeatsArea.getText());
-        if (!posMaps.isEmpty()) glossMap.put("pos", posMaps);
-        if (!featMaps.isEmpty()) glossMap.put("feats", featMaps);
-        if (!glossMap.isEmpty()) root.put("gloss_map", glossMap);
-
-        if (!nullToEmpty(conlluExtractorNameField.getText()).isBlank()) {
-            Map<String, Object> extractors = new LinkedHashMap<>();
-            Map<String, Object> extractor = new LinkedHashMap<>();
-
-            Map<String, Object> tagSchema = new LinkedHashMap<>();
-            Map<String, Object> series = new LinkedHashMap<>();
-            for (String line : nonBlankLines(conlluExtractorSeriesArea.getText())) {
-                String[] parts = line.split("=", 2);
-                if (parts.length == 2) {
-                    series.put(parts[0].trim(), Map.of("role", parts[1].trim()));
-                }
-            }
-
-            Map<String, Object> values = new LinkedHashMap<>();
-            List<String> persons = csvOrLines(conlluExtractorPersonsArea.getText());
-            if (!persons.isEmpty()) {
-                values.put("person", new ArrayList<>(persons));
-            }
-
-            Map<String, Object> number = new LinkedHashMap<>();
-            if (!nullToEmpty(conlluExtractorNumberSuffixField.getText()).isBlank()) {
-                number.put("suffix", conlluExtractorNumberSuffixField.getText().trim());
-            }
-            if (!number.isEmpty()) values.put("number", number);
-            if (!series.isEmpty()) tagSchema.put("series", series);
-            if (!values.isEmpty()) tagSchema.put("values", values);
-            if (!tagSchema.isEmpty()) extractor.put("tag_schema", tagSchema);
-
-            List<Map<String, Object>> routing = parseRoutingLines(conlluExtractorRoutingArea.getText());
-            if (!routing.isEmpty()) extractor.put("routing", routing);
-
-            extractors.put(conlluExtractorNameField.getText().trim(), extractor);
-            root.put("extractors", extractors);
-        }
-
-        List<String> extractorsFiles = nonBlankLines(conlluExtractorsFileArea.getText());
-        if (!extractorsFiles.isEmpty()) {
-            root.put("extractors_file", new ArrayList<>(extractorsFiles));
-        }
-
-        List<String> rulesFiles = nonBlankLines(conlluRulesFileArea.getText());
-        if (!rulesFiles.isEmpty()) {
-            root.put("rules_file", new ArrayList<>(rulesFiles));
-        }
-    }
-
     private Map<String, Object> buildConlluMatch() {
         Map<String, Object> match = new LinkedHashMap<>();
-
         putIfNotBlank(match, "regex", conlluMatchRegexField.getText());
-        putCsvIfPresent(match, "in_list", conlluMatchInListField.getText());
-        putCsvIfPresent(match, "require", conlluMatchRequireField.getText());
-        putCsvIfPresent(match, "forbid", conlluMatchForbidField.getText());
+        putListIfPresent(match, "in_list", conlluMatchInListPanel.getValues());
+        putListIfPresent(match, "require", conlluMatchRequirePanel.getValues());
+        putListIfPresent(match, "forbid", conlluMatchForbidPanel.getValues());
 
         if (!nullToEmpty(conlluMatchGlossLiteralField.getText()).isBlank()) {
             match.put("gloss", conlluMatchGlossLiteralField.getText().trim());
@@ -824,18 +523,13 @@ public final class RuleBuilderPanel extends JPanel {
             Map<String, Object> gloss = new LinkedHashMap<>();
             putIfNotBlank(gloss, "regex", conlluMatchGlossRegexField.getText());
             putIfNotBlank(gloss, "in_lexicon", conlluMatchGlossInLexiconField.getText());
-            putCsvIfPresent(gloss, "in_list", conlluMatchGlossInListField.getText());
-            putCsvIfPresent(gloss, "require", conlluMatchGlossRequireField.getText());
-            putCsvIfPresent(gloss, "forbid", conlluMatchGlossForbidField.getText());
-
-            List<Map<String, String>> extracts = parseExtractLines(conlluMatchExtractArea.getText());
-            if (!extracts.isEmpty()) {
-                gloss.put("extract", extracts);
+            putListIfPresent(gloss, "in_list", conlluMatchGlossInListPanel.getValues());
+            putListIfPresent(gloss, "require", conlluMatchGlossRequirePanel.getValues());
+            putListIfPresent(gloss, "forbid", conlluMatchGlossForbidPanel.getValues());
+            if (!conlluMatchExtractPanel.getSpecs().isEmpty()) {
+                gloss.put("extract", conlluMatchExtractPanel.getSpecs());
             }
-
-            if (!gloss.isEmpty()) {
-                match.put("gloss", gloss);
-            }
+            if (!gloss.isEmpty()) match.put("gloss", gloss);
         }
 
         return match;
@@ -849,29 +543,80 @@ public final class RuleBuilderPanel extends JPanel {
         }
 
         if ("rule_feats".equals(mode) || "rule_full".equals(mode)) {
-            Map<String, String> feats = parseSimpleKeyValueLines(conlluFeatsArea.getText());
-            if (!feats.isEmpty()) {
-                set.put("feats", feats);
+            if (!conlluFeatsPanel.getMap().isEmpty()) {
+                set.put("feats", conlluFeatsPanel.getMap());
             }
-
-            Map<String, String> featTemplates = parseSimpleKeyValueLines(conlluFeatsTemplateArea.getText());
-            if (!featTemplates.isEmpty()) {
-                set.put("feats_template", featTemplates);
+            if (!conlluFeatsTemplatePanel.getMap().isEmpty()) {
+                set.put("feats_template", conlluFeatsTemplatePanel.getMap());
             }
         }
 
         if ("rule_extract".equals(mode) || "rule_full".equals(mode)) {
-            List<Map<String, String>> extracts = parseExtractLines(conlluSetExtractArea.getText());
-            if (!extracts.isEmpty()) {
-                set.put("extract", extracts);
+            if (!conlluSetExtractPanel.getSpecs().isEmpty()) {
+                set.put("extract", conlluSetExtractPanel.getSpecs());
             }
         }
 
         return set;
     }
 
-    private List<String> suffixFinalGlossStartsWith() {
-        return csv(correctionGlossLastStartsWithField.getText());
+    private void fillConlluGlobals(Map<String, Object> root) {
+        Map<String, Object> def = new LinkedHashMap<>();
+        putListIfPresent(def, "pos", defPosPanel.getValues());
+        putListIfPresent(def, "feats", defFeatsPanel.getValues());
+        if (!def.isEmpty()) root.put("def", def);
+
+        if (!nullToEmpty(lexiconNameField.getText()).isBlank() && !nullToEmpty(lexiconFileField.getText()).isBlank()) {
+            root.put("lexicons", Map.of(lexiconNameField.getText().trim(), lexiconFileField.getText().trim()));
+        }
+
+        Map<String, Object> glossMap = new LinkedHashMap<>();
+        if (!glossMapPosPanel.getMap().isEmpty()) {
+            List<Map<String, Object>> posEntries = new ArrayList<>();
+            for (var e : glossMapPosPanel.getMap().entrySet()) {
+                posEntries.add(Map.of(e.getKey(), e.getValue()));
+            }
+            glossMap.put("pos", posEntries);
+        }
+        if (!glossMapFeatsPanel.getEntries().isEmpty()) {
+            glossMap.put("feats", glossMapFeatsPanel.getEntries());
+        }
+        if (!glossMap.isEmpty()) {
+            root.put("gloss_map", glossMap);
+        }
+
+        if (!nullToEmpty(extractorNameField.getText()).isBlank()) {
+            Map<String, Object> extractors = new LinkedHashMap<>();
+            Map<String, Object> extractor = new LinkedHashMap<>();
+
+            Map<String, Object> tagSchema = new LinkedHashMap<>();
+            Map<String, Object> series = new LinkedHashMap<>();
+            for (var e : extractorSeriesPanel.getMap().entrySet()) {
+                series.put(e.getKey(), Map.of("role", e.getValue()));
+            }
+
+            Map<String, Object> values = new LinkedHashMap<>();
+            if (!extractorPersonsPanel.getValues().isEmpty()) {
+                values.put("person", new ArrayList<>(extractorPersonsPanel.getValues()));
+            }
+            if (!nullToEmpty(extractorNumberSuffixField.getText()).isBlank()) {
+                values.put("number", Map.of("suffix", extractorNumberSuffixField.getText().trim()));
+            }
+
+            if (!series.isEmpty()) tagSchema.put("series", series);
+            if (!values.isEmpty()) tagSchema.put("values", values);
+            if (!tagSchema.isEmpty()) extractor.put("tag_schema", tagSchema);
+
+            if (!routingRulePanel.getRoutingRules().isEmpty()) {
+                extractor.put("routing", routingRulePanel.getRoutingRules());
+            }
+
+            extractors.put(extractorNameField.getText().trim(), extractor);
+            root.put("extractors", extractors);
+        }
+
+        putListIfPresent(root, "extractors_file", extractorsFilePanel.getValues());
+        putListIfPresent(root, "rules_file", rulesFilePanel.getValues());
     }
 
     private void chooseFileInto(JTextField field) {
@@ -880,6 +625,14 @@ public final class RuleBuilderPanel extends JPanel {
             Path path = chooser.getSelectedFile().toPath();
             field.setText(path.toString());
         }
+    }
+
+    private Map<String, Object> baseRuleMap() {
+        Map<String, Object> rule = new LinkedHashMap<>();
+        rule.put("id", require(idField.getText(), "Rule id cannot be blank").trim());
+        rule.put("name", require(nameField.getText(), "Rule name cannot be blank").trim());
+        putIfNotBlank(rule, "description", descriptionArea.getText());
+        return rule;
     }
 
     private void clearError() {
@@ -897,14 +650,6 @@ public final class RuleBuilderPanel extends JPanel {
         }
     }
 
-    private Map<String, Object> baseRuleMap() {
-        Map<String, Object> rule = new LinkedHashMap<>();
-        rule.put("id", require(idField.getText(), "Rule id cannot be blank").trim());
-        rule.put("name", require(nameField.getText(), "Rule name cannot be blank").trim());
-        putIfNotBlank(rule, "description", descriptionArea.getText());
-        return rule;
-    }
-
     private static GridBagConstraints baseConstraints() {
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(4, 4, 4, 4);
@@ -920,7 +665,6 @@ public final class RuleBuilderPanel extends JPanel {
         c.gridy = row;
         c.gridwidth = 1;
         c.weightx = 0;
-        c.weighty = 0;
         panel.add(new JLabel(label), c);
 
         c.gridx = 1;
@@ -931,6 +675,12 @@ public final class RuleBuilderPanel extends JPanel {
     private static void putIfNotBlank(Map<String, Object> map, String key, String value) {
         if (value != null && !value.isBlank()) {
             map.put(key, value.trim());
+        }
+    }
+
+    private static void putListIfPresent(Map<String, Object> map, String key, List<String> values) {
+        if (values != null && !values.isEmpty()) {
+            map.put(key, new ArrayList<>(values));
         }
     }
 
@@ -957,7 +707,7 @@ public final class RuleBuilderPanel extends JPanel {
         if (value.isBlank()) {
             return List.of();
         }
-        return Arrays.stream(value.split("\\s*,\\s*"))
+        return List.of(value.split("\\s*,\\s*")).stream()
                 .map(String::trim)
                 .filter(s -> !s.isBlank())
                 .toList();
@@ -969,104 +719,5 @@ public final class RuleBuilderPanel extends JPanel {
             throw new IllegalArgumentException(message);
         }
         return values;
-    }
-
-    private static List<String> nonBlankLines(String text) {
-        return nullToEmpty(text).lines()
-                .map(String::trim)
-                .filter(s -> !s.isBlank())
-                .toList();
-    }
-
-    private static List<String> csvOrLines(String text) {
-        List<String> lines = nonBlankLines(text);
-        List<String> out = new ArrayList<>();
-        for (String line : lines) {
-            out.addAll(csv(line));
-        }
-        return out;
-    }
-
-    private static Map<String, String> parseSimpleKeyValueLines(String text) {
-        Map<String, String> out = new LinkedHashMap<>();
-        for (String line : nonBlankLines(text)) {
-            int idx = line.indexOf('=');
-            if (idx <= 0 || idx == line.length() - 1) continue;
-            out.put(line.substring(0, idx).trim(), line.substring(idx + 1).trim());
-        }
-        return out;
-    }
-
-    private static List<List<String>> parseTokenSequenceLines(String text) {
-        List<List<String>> out = new ArrayList<>();
-        for (String line : nonBlankLines(text)) {
-            List<String> seq = csv(line);
-            if (!seq.isEmpty()) {
-                out.add(new ArrayList<>(seq));
-            }
-        }
-        return out;
-    }
-
-    private static List<Map<String, String>> parseExtractLines(String text) {
-        List<Map<String, String>> out = new ArrayList<>();
-        for (String line : nonBlankLines(text)) {
-            Map<String, String> entry = new LinkedHashMap<>();
-            for (String piece : line.split("\\s*,\\s*")) {
-                String[] kv = piece.split("=", 2);
-                if (kv.length == 2) {
-                    entry.put(kv[0].trim(), kv[1].trim());
-                }
-            }
-            if (!entry.isEmpty()) {
-                out.add(entry);
-            }
-        }
-        return out;
-    }
-
-    private static List<Map<String, Object>> parseKeyValueMapLines(String text) {
-        List<Map<String, Object>> out = new ArrayList<>();
-        for (String line : nonBlankLines(text)) {
-            int idx = line.indexOf('=');
-            if (idx <= 0 || idx == line.length() - 1) continue;
-            out.add(Map.of(line.substring(0, idx).trim(), line.substring(idx + 1).trim()));
-        }
-        return out;
-    }
-
-    private static List<Map<String, Object>> parseFeatGlossMapLines(String text) {
-        List<Map<String, Object>> out = new ArrayList<>();
-        for (String line : nonBlankLines(text)) {
-            int idx = line.indexOf('=');
-            if (idx <= 0 || idx == line.length() - 1) continue;
-            String gloss = line.substring(0, idx).trim();
-            String rhs = line.substring(idx + 1).trim();
-            int idx2 = rhs.indexOf(':');
-            if (idx2 <= 0 || idx2 == rhs.length() - 1) continue;
-            out.add(Map.of(gloss, List.of(rhs.substring(0, idx2).trim(), rhs.substring(idx2 + 1).trim())));
-        }
-        return out;
-    }
-
-    private static List<Map<String, Object>> parseRoutingLines(String text) {
-        List<Map<String, Object>> out = new ArrayList<>();
-        for (String line : nonBlankLines(text)) {
-            String[] parts = line.split("=>", 2);
-            if (parts.length != 2) continue;
-            Map<String, Object> rr = new LinkedHashMap<>();
-            rr.put("when", parts[0].trim());
-
-            Map<String, Object> set = new LinkedHashMap<>();
-            for (String assign : parts[1].split("\\s*;\\s*")) {
-                String[] kv = assign.split("=", 2);
-                if (kv.length == 2) {
-                    set.put(kv[0].trim(), kv[1].trim());
-                }
-            }
-            rr.put("set", set);
-            out.add(rr);
-        }
-        return out;
     }
 }
