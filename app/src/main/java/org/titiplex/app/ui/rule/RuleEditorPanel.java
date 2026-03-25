@@ -4,10 +4,15 @@ import org.titiplex.app.domain.rule.RuleId;
 import org.titiplex.app.domain.rule.RuleVersion;
 import org.titiplex.app.persistence.entity.Rule;
 import org.titiplex.app.persistence.entity.RuleKind;
+import org.yaml.snakeyaml.Yaml;
 
 import javax.swing.*;
 import java.awt.*;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public final class RuleEditorPanel extends JPanel {
     private final JTextField ruleIdField = new JTextField();
@@ -18,6 +23,7 @@ public final class RuleEditorPanel extends JPanel {
     private final JTextArea descriptionArea = new JTextArea(5, 80);
     private final JTextArea yamlArea = new JTextArea(24, 80);
     private final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    private final Yaml yaml = new Yaml();
 
     private Rule currentRule;
 
@@ -150,6 +156,9 @@ public final class RuleEditorPanel extends JPanel {
             throw new IllegalArgumentException("Rule name cannot be blank");
         }
 
+        String description = descriptionArea.getText().trim();
+        String normalizedYaml = normalizeYamlMetadata(yamlArea.getText(), stableId, name, description);
+
         Instant now = Instant.now();
         return new Rule(
                 currentRule == null ? null : currentRule.getId(),
@@ -157,12 +166,58 @@ public final class RuleEditorPanel extends JPanel {
                 name,
                 (RuleKind) kindBox.getSelectedItem(),
                 enabledBox.isSelected(),
-                yamlArea.getText(),
+                normalizedYaml,
                 currentRule == null ? "desktop-editor" : currentRule.getSourceFile(),
-                descriptionArea.getText().trim(),
+                description,
                 currentRule == null ? new RuleVersion(1).value() : currentRule.getVersionNo(),
                 currentRule == null ? now : currentRule.getCreatedAt(),
                 now
         );
+    }
+
+    @SuppressWarnings("unchecked")
+    private String normalizeYamlMetadata(String yamlBody, String stableId, String name, String description) {
+        if (yamlBody == null || yamlBody.isBlank()) {
+            throw new IllegalArgumentException("YAML body cannot be blank");
+        }
+
+        Object loaded = yaml.load(yamlBody);
+        if (!(loaded instanceof Map<?, ?> rawRoot)) {
+            throw new IllegalArgumentException("YAML body must be a YAML object");
+        }
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : rawRoot.entrySet()) {
+            root.put(String.valueOf(entry.getKey()), entry.getValue());
+        }
+
+        Object rawRules = root.get("rules");
+        if (!(rawRules instanceof List<?> rules) || rules.isEmpty()) {
+            throw new IllegalArgumentException("YAML body must contain a non-empty 'rules' list");
+        }
+
+        Object firstRuleRaw = rules.get(0);
+        if (!(firstRuleRaw instanceof Map<?, ?> firstRuleMapRaw)) {
+            throw new IllegalArgumentException("The first item of 'rules' must be a YAML object");
+        }
+
+        Map<String, Object> firstRule = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : firstRuleMapRaw.entrySet()) {
+            firstRule.put(String.valueOf(entry.getKey()), entry.getValue());
+        }
+
+        firstRule.put("id", stableId);
+        firstRule.put("name", name);
+        if (description.isBlank()) {
+            firstRule.remove("description");
+        } else {
+            firstRule.put("description", description);
+        }
+
+        List<Object> newRules = new ArrayList<>(rules);
+        newRules.set(0, firstRule);
+        root.put("rules", newRules);
+
+        return yaml.dump(root);
     }
 }

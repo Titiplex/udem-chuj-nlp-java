@@ -2,6 +2,7 @@ package org.titiplex.app.ui.frame;
 
 import org.springframework.stereotype.Component;
 import org.titiplex.app.service.AnnotationConfigStateService;
+import org.titiplex.app.service.AppRefreshCoordinator;
 import org.titiplex.app.service.AutoCorrectionService;
 import org.titiplex.app.service.ConlluPreviewService;
 import org.titiplex.app.service.CorpusImportService;
@@ -38,7 +39,8 @@ public class MainFrame extends JFrame {
             AutoCorrectionService autoCorrectionService,
             DesktopExportService exportService,
             AnnotationConfigStateService annotationConfigStateService,
-            ConlluPreviewService conlluPreviewService
+            ConlluPreviewService conlluPreviewService,
+            AppRefreshCoordinator refreshCoordinator
     ) {
         super("Chuj NLP Studio");
 
@@ -51,17 +53,24 @@ public class MainFrame extends JFrame {
         setLayout(new BorderLayout());
 
         this.rulePanel = new RulePanel(ruleService, this::setStatus);
-        this.entryPanel = new EntryPanel(correctedEntryService, rawEntryService, this::setStatus);
+        this.entryPanel = new EntryPanel(
+                correctedEntryService,
+                rawEntryService,
+                refreshCoordinator,
+                this::setStatus
+        );
         this.rawEntryPanel = new RawEntryPanel(
                 rawEntryService,
                 corpusImportService,
                 autoCorrectionService,
+                refreshCoordinator,
                 this::setStatus
         );
         this.conlluPanel = new ConlluPanel(
                 correctedEntryService,
                 annotationConfigStateService,
                 conlluPreviewService,
+                refreshCoordinator,
                 this::setStatus
         );
 

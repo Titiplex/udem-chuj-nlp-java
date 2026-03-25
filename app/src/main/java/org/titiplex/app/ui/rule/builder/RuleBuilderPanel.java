@@ -110,10 +110,10 @@ public final class RuleBuilderPanel extends JPanel {
     private final StringListTablePanel defFeatsPanel = new StringListTablePanel("def.feats", "Feature");
     private final KeyValueTablePanel glossMapPosPanel = new KeyValueTablePanel("gloss_map.pos", "Gloss", "UPOS");
     private final GlossFeatMapTablePanel glossMapFeatsPanel = new GlossFeatMapTablePanel("gloss_map.feats");
-    private final JTextField extractorNameField = new JTextField("agreement_verbs");
+    private final JTextField extractorNameField = new JTextField();
     private final KeyValueTablePanel extractorSeriesPanel = new KeyValueTablePanel("extractor series", "Series", "Role");
     private final StringListTablePanel extractorPersonsPanel = new StringListTablePanel("extractor persons", "Person");
-    private final JTextField extractorNumberSuffixField = new JTextField("PL");
+    private final JTextField extractorNumberSuffixField = new JTextField();
     private final RoutingRuleTablePanel routingRulePanel = new RoutingRuleTablePanel("routing");
     private final StringListTablePanel extractorsFilePanel = new StringListTablePanel("extractors_file", "Path");
     private final StringListTablePanel rulesFilePanel = new StringListTablePanel("rules_file", "Path");
@@ -436,8 +436,24 @@ public final class RuleBuilderPanel extends JPanel {
     private Map<String, Object> buildCorrectionMatch() {
         Map<String, Object> match = new LinkedHashMap<>();
 
-        if (!matchGlossPanel.getValues().isEmpty()) {
-            match.put("gloss", new ArrayList<>(matchGlossPanel.getValues()));
+        List<String> glossValues = matchGlossPanel.getValues();
+        List<String> glossStartsWith = matchGlossStartsWithPanel.getValues();
+        String glossLexicon = nullToEmpty(matchGlossInLexiconField.getText()).trim();
+
+        boolean hasStructuredGloss =
+                !glossStartsWith.isEmpty()
+                        || !glossLexicon.isBlank();
+
+        if (hasStructuredGloss) {
+            Map<String, Object> gloss = new LinkedHashMap<>();
+            putListIfPresent(gloss, "any", glossValues);
+            putListIfPresent(gloss, "starts_with", glossStartsWith);
+            putIfNotBlank(gloss, "in_lexicon", glossLexicon);
+            if (!gloss.isEmpty()) {
+                match.put("gloss", gloss);
+            }
+        } else if (!glossValues.isEmpty()) {
+            match.put("gloss", new ArrayList<>(glossValues));
         }
 
         Map<String, Object> tokens = new LinkedHashMap<>();
@@ -453,13 +469,6 @@ public final class RuleBuilderPanel extends JPanel {
             match.put("tokens", tokens);
         } else if (!matchTokenSequencesPanel.getSequences().isEmpty()) {
             match.put("tokens", matchTokenSequencesPanel.getSequences());
-        }
-
-        Map<String, Object> gloss = new LinkedHashMap<>();
-        putListIfPresent(gloss, "starts_with", matchGlossStartsWithPanel.getValues());
-        putIfNotBlank(gloss, "in_lexicon", matchGlossInLexiconField.getText());
-        if (!gloss.isEmpty()) {
-            match.put("gloss", gloss);
         }
 
         Map<String, Object> surface = new LinkedHashMap<>();

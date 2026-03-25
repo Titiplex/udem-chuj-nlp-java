@@ -1,6 +1,7 @@
 package org.titiplex.app.ui.raw;
 
 import org.titiplex.app.persistence.entity.RawEntry;
+import org.titiplex.app.service.AppRefreshCoordinator;
 import org.titiplex.app.service.AutoCorrectionService;
 import org.titiplex.app.service.CorpusImportService;
 import org.titiplex.app.service.RawEntryService;
@@ -19,17 +20,20 @@ public class RawEntryPanel extends JPanel {
     private final RawEntryService rawEntryService;
     private final CorpusImportService corpusImportService;
     private final AutoCorrectionService autoCorrectionService;
+    private final AppRefreshCoordinator refreshCoordinator;
     private final Consumer<String> statusConsumer;
 
     public RawEntryPanel(
             RawEntryService rawEntryService,
             CorpusImportService corpusImportService,
             AutoCorrectionService autoCorrectionService,
+            AppRefreshCoordinator refreshCoordinator,
             Consumer<String> statusConsumer
     ) {
         this.rawEntryService = rawEntryService;
         this.corpusImportService = corpusImportService;
         this.autoCorrectionService = autoCorrectionService;
+        this.refreshCoordinator = refreshCoordinator;
         this.statusConsumer = statusConsumer;
 
         setLayout(new BorderLayout(8, 8));
@@ -77,6 +81,9 @@ public class RawEntryPanel extends JPanel {
         splitPane.setResizeWeight(0.28);
 
         add(splitPane, BorderLayout.CENTER);
+
+        refreshCoordinator.subscribe(AppRefreshCoordinator.Topic.RAW_ENTRIES, this::refresh);
+
         refresh();
     }
 
@@ -95,6 +102,7 @@ public class RawEntryPanel extends JPanel {
         try {
             int count = corpusImportService.importFile(path);
             refresh();
+            refreshCoordinator.publish(AppRefreshCoordinator.Topic.RAW_ENTRIES);
             Dialogs.info(this, "Imported " + count + " raw entrie(s).");
             statusConsumer.accept("Imported " + count + " raw entrie(s).");
         } catch (Exception exception) {
@@ -105,9 +113,11 @@ public class RawEntryPanel extends JPanel {
     private void saveCurrentEntry() {
         try {
             RawEntry saved = rawEntryService.save(editorPanel.toEntry());
+            refreshCoordinator.publish(AppRefreshCoordinator.Topic.RAW_ENTRIES);
 
             if (editorPanel.isAutoApplyRulesSelected()) {
                 autoCorrectionService.applyToRawEntry(saved);
+                refreshCoordinator.publish(AppRefreshCoordinator.Topic.CORRECTED_ENTRIES);
                 statusConsumer.accept("Raw entry saved and rules applied: #" + saved.getId());
                 Dialogs.info(this, "Raw entry saved and rules applied.");
             } else {
@@ -127,10 +137,11 @@ public class RawEntryPanel extends JPanel {
             RawEntry entry = editorPanel.toEntry();
             if (entry.getId() == null) {
                 entry = rawEntryService.save(entry);
+                refreshCoordinator.publish(AppRefreshCoordinator.Topic.RAW_ENTRIES);
             }
-            boolean approvedBefore = entry.getId() != null
-                    && rawEntryService.getById(entry.getId()) != null;
+
             var corrected = autoCorrectionService.applyToRawEntry(entry);
+            refreshCoordinator.publish(AppRefreshCoordinator.Topic.CORRECTED_ENTRIES);
 
             if (Boolean.TRUE.equals(corrected.getIsCorrect())) {
                 Dialogs.info(this, "Linked corrected entry is approved, so it was not overwritten.");
@@ -147,6 +158,7 @@ public class RawEntryPanel extends JPanel {
     private void applyRulesToAll() {
         try {
             int count = autoCorrectionService.applyToAll(rawEntryService.getAll());
+            refreshCoordinator.publish(AppRefreshCoordinator.Topic.CORRECTED_ENTRIES);
             Dialogs.info(this, "Rules applied to " + count + " raw entrie(s). Approved entries were preserved.");
             statusConsumer.accept("Rules applied to " + count + " raw entrie(s).");
         } catch (Exception exception) {
@@ -168,9 +180,14 @@ public class RawEntryPanel extends JPanel {
             return;
         }
 
-        rawEntryService.delete(entry.getId());
-        refresh();
-        editorPanel.setEntry(null);
-        statusConsumer.accept("Raw entry deleted: #" + entry.getId());
+        try {
+            rawEntryService.delete(entry.getId());
+            refreshCoordinator.publish(AppRefreshCoordinator.Topic.RAW_ENTRIES);
+            refresh();
+            editorPanel.setEntry(null);
+            statusConsumer.accept("Raw entry deleted: #" + entry.getId());
+        } catch (Exception exception) {
+            Dialogs.error(this, "Failed to delete raw entry", exception);
+        }
     }
 }

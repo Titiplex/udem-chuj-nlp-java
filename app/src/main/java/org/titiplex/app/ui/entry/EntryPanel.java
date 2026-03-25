@@ -1,6 +1,7 @@
 package org.titiplex.app.ui.entry;
 
 import org.titiplex.app.persistence.entity.CorrectedEntry;
+import org.titiplex.app.service.AppRefreshCoordinator;
 import org.titiplex.app.service.CorrectedEntryService;
 import org.titiplex.app.service.RawEntryService;
 import org.titiplex.app.ui.common.Dialogs;
@@ -14,14 +15,17 @@ public class EntryPanel extends JPanel {
     private final EntryEditorPanel editorPanel;
     private final JTable table = new JTable(tableModel);
     private final CorrectedEntryService entryService;
+    private final AppRefreshCoordinator refreshCoordinator;
     private final Consumer<String> statusConsumer;
 
     public EntryPanel(
             CorrectedEntryService entryService,
             RawEntryService rawEntryService,
+            AppRefreshCoordinator refreshCoordinator,
             Consumer<String> statusConsumer
     ) {
         this.entryService = entryService;
+        this.refreshCoordinator = refreshCoordinator;
         this.statusConsumer = statusConsumer;
         this.editorPanel = new EntryEditorPanel(rawEntryService);
 
@@ -64,6 +68,10 @@ public class EntryPanel extends JPanel {
         splitPane.setResizeWeight(0.30);
 
         add(splitPane, BorderLayout.CENTER);
+
+        refreshCoordinator.subscribe(AppRefreshCoordinator.Topic.CORRECTED_ENTRIES, this::refresh);
+        refreshCoordinator.subscribe(AppRefreshCoordinator.Topic.RAW_ENTRIES, editorPanel::reloadRawEntryChoices);
+
         refresh();
     }
 
@@ -80,6 +88,7 @@ public class EntryPanel extends JPanel {
     private void saveCurrentEntry() {
         try {
             CorrectedEntry saved = entryService.save(editorPanel.toEntry());
+            refreshCoordinator.publish(AppRefreshCoordinator.Topic.CORRECTED_ENTRIES);
             refresh();
             editorPanel.setEntry(saved);
             statusConsumer.accept("Entry saved: #" + saved.getId());
@@ -104,6 +113,7 @@ public class EntryPanel extends JPanel {
         }
 
         entryService.delete(entry.getId());
+        refreshCoordinator.publish(AppRefreshCoordinator.Topic.CORRECTED_ENTRIES);
         refresh();
         editorPanel.setEntry(null);
         statusConsumer.accept("Entry deleted: #" + entry.getId());

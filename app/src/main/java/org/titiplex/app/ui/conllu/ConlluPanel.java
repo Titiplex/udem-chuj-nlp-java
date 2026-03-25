@@ -2,6 +2,7 @@ package org.titiplex.app.ui.conllu;
 
 import org.titiplex.app.persistence.entity.CorrectedEntry;
 import org.titiplex.app.service.AnnotationConfigStateService;
+import org.titiplex.app.service.AppRefreshCoordinator;
 import org.titiplex.app.service.ConlluPreviewService;
 import org.titiplex.app.service.CorrectedEntryService;
 import org.titiplex.app.ui.common.Dialogs;
@@ -26,6 +27,7 @@ public class ConlluPanel extends JPanel {
             CorrectedEntryService correctedEntryService,
             AnnotationConfigStateService annotationConfigStateService,
             ConlluPreviewService conlluPreviewService,
+            AppRefreshCoordinator refreshCoordinator,
             Consumer<String> statusConsumer
     ) {
         this.correctedEntryService = correctedEntryService;
@@ -41,10 +43,12 @@ public class ConlluPanel extends JPanel {
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
 
+        JButton loadConfigButton = new JButton("Load config");
         JButton resetConfigButton = new JButton("Reset config");
         JButton previewButton = new JButton("Preview");
         JButton refreshButton = new JButton("Refresh");
 
+        toolBar.add(loadConfigButton);
         toolBar.add(resetConfigButton);
         toolBar.add(previewButton);
         toolBar.add(refreshButton);
@@ -60,6 +64,7 @@ public class ConlluPanel extends JPanel {
             }
         });
 
+        loadConfigButton.addActionListener(event -> loadAnnotationConfig());
         resetConfigButton.addActionListener(event -> resetAnnotationConfig());
         previewButton.addActionListener(event -> previewSelectedEntry());
         refreshButton.addActionListener(event -> refresh());
@@ -72,6 +77,8 @@ public class ConlluPanel extends JPanel {
         splitPane.setResizeWeight(0.30);
 
         add(splitPane, BorderLayout.CENTER);
+
+        refreshCoordinator.subscribe(AppRefreshCoordinator.Topic.CORRECTED_ENTRIES, this::refresh);
 
         refresh();
         updateConfigStatus();
