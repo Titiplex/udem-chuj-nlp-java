@@ -18,18 +18,27 @@ public final class MatchParser {
         List<List<String>> sequences = new ArrayList<>();
 
         if (tokenDirect instanceof List<?> l && !l.isEmpty() && l.get(0) instanceof List<?>) {
-            for (Object o : l) sequences.add(RuleYamlSupport.stringList(o));
+            for (Object o : l) {
+                sequences.add(RuleYamlSupport.stringList(o));
+            }
         } else if (tokenDirect instanceof List<?> && !RuleYamlSupport.stringList(tokenDirect).isEmpty() && tokenMap.isEmpty()) {
             sequences.add(RuleYamlSupport.stringList(tokenDirect));
         }
-        if (tokenMap.containsKey("isword"))
-            for (String s : RuleYamlSupport.stringList(tokenMap.get("isword"))) sequences.add(List.of(s));
-
+        if (tokenMap.containsKey("isword")) {
+            for (String s : RuleYamlSupport.stringList(tokenMap.get("isword"))) {
+                sequences.add(List.of(s));
+            }
+        }
 
         List<String> glossValues = new ArrayList<>();
         Object glossObj = match.get("gloss");
         if (glossObj instanceof String g) {
             glossValues.add(g);
+        } else if (glossObj instanceof Map<?, ?>) {
+            Object any = glossMap.containsKey("any")
+                    ? glossMap.get("any")
+                    : glossMap.get("values");
+            glossValues.addAll(RuleYamlSupport.stringList(any));
         } else {
             glossValues.addAll(RuleYamlSupport.stringList(glossObj));
         }
