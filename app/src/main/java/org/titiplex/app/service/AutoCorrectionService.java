@@ -11,6 +11,7 @@ import org.titiplex.model.RawBlock;
 import org.titiplex.pipeline.CorrectionPipeline;
 import org.titiplex.rules.RuleEngine;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -33,6 +34,10 @@ public class AutoCorrectionService {
                 : correctedEntryRepository.findByRawEntryId(rawEntry.getId()).orElse(null);
 
         if (existing != null && Boolean.TRUE.equals(existing.getIsCorrect())) {
+            if (shouldMarkApprovedEntryAsStale(existing, rawEntry)) {
+                existing.setStale(true);
+                correctedEntryRepository.save(existing);
+            }
             return existing;
         }
 
@@ -57,9 +62,13 @@ public class AutoCorrectionService {
         target.setGlossText(corrected.glossText());
         target.setTranslationText(corrected.translation());
         target.setDescription("Generated from raw entry #" + rawEntry.getId());
+        target.setStale(false);
 
         if (target.getIsCorrect() == null) {
             target.setIsCorrect(false);
+        }
+        if (!Boolean.TRUE.equals(target.getIsCorrect())) {
+            target.setApprovedRawUpdatedAt(null);
         }
 
         return correctedEntryRepository.save(target);
@@ -72,6 +81,20 @@ public class AutoCorrectionService {
             count++;
         }
         return count;
+    }
+
+    private static boolean shouldMarkApprovedEntryAsStale(CorrectedEntry existing, RawEntry rawEntry) {
+        if (existing.isStale()) {
+            return false;
+        }
+
+        Instant approvedRawUpdatedAt = existing.getApprovedRawUpdatedAt();
+        Instant rawUpdatedAt = rawEntry.getUpdatedAt();
+
+        if (approvedRawUpdatedAt == null) {
+            return true;
+        }
+        return rawUpdatedAt != null && rawUpdatedAt.isAfter(approvedRawUpdatedAt);
     }
 
     private static String nullToEmpty(String value) {

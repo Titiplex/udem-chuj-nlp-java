@@ -8,8 +8,9 @@ import java.util.List;
 
 public class EntryTableModel extends AbstractTableModel {
 
-    private final String[] columns = {"Id", "Updated"};
+    private final String[] columns = {"Id", "Status", "Updated"};
     private final List<CorrectedEntry> entries = new ArrayList<>();
+
     public void setEntries(List<CorrectedEntry> newEntries) {
         entries.clear();
         entries.addAll(newEntries);
@@ -24,6 +25,7 @@ public class EntryTableModel extends AbstractTableModel {
     public CorrectedEntry getEntryAt(int row) {
         return entries.get(row);
     }
+
     @Override
     public int getRowCount() {
         return entries.size();
@@ -39,7 +41,8 @@ public class EntryTableModel extends AbstractTableModel {
         CorrectedEntry entry = getEntryAt(rowIndex);
         return switch (columnIndex) {
             case 0 -> entry.getId();
-            case 1 -> entry.getUpdatedAt().toString();
+            case 1 -> entry.workflowStatusLabel();
+            case 2 -> entry.getUpdatedAt() == null ? "" : entry.getUpdatedAt().toString();
             default -> null;
         };
     }

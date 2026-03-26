@@ -33,7 +33,8 @@ public class CorrectedEntryService {
         if (entry.getIsCorrect() == null) {
             entry.setIsCorrect(false);
         }
-        return repository.save(entry);
+        syncApprovalState(entry);
+        return repository.saveAndFlush(entry);
     }
 
     public void delete(Long id) {
@@ -57,5 +58,17 @@ public class CorrectedEntryService {
                     "Raw entry #" + rawEntry.getId() + " is already linked to corrected entry #" + existing.getId() + "."
             );
         }
+    }
+
+    private void syncApprovalState(CorrectedEntry entry) {
+        if (Boolean.TRUE.equals(entry.getIsCorrect())) {
+            entry.setStale(false);
+            RawEntry rawEntry = entry.getRawEntry();
+            entry.setApprovedRawUpdatedAt(rawEntry == null ? null : rawEntry.getUpdatedAt());
+            return;
+        }
+
+        entry.setStale(false);
+        entry.setApprovedRawUpdatedAt(null);
     }
 }

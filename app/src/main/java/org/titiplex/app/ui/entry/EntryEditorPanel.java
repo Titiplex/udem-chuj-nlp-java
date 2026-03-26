@@ -6,11 +6,14 @@ import org.titiplex.app.service.RawEntryService;
 
 import javax.swing.*;
 import java.awt.*;
+import java.time.Instant;
 import java.util.List;
 
 public class EntryEditorPanel extends JPanel {
     private final JTextField idField = new JTextField();
     private final JComboBox<RawEntryRef> rawEntryComboBox = new JComboBox<>();
+    private final JTextField statusField = new JTextField();
+    private final JTextField approvedRawUpdatedAtField = new JTextField();
     private final JTextField createdField = new JTextField();
     private final JTextField updatedField = new JTextField();
     private final JTextField translationField = new JTextField();
@@ -23,6 +26,7 @@ public class EntryEditorPanel extends JPanel {
 
     private final JTextArea descriptionArea = new JTextArea(5, 80);
     private final JCheckBox approvedBox = new JCheckBox("Approved", false);
+    private final JLabel staleWarningLabel = new JLabel(" ");
 
     private CorrectedEntry entry;
     private final RawEntryService rawEntryService;
@@ -33,6 +37,8 @@ public class EntryEditorPanel extends JPanel {
         setLayout(new BorderLayout(8, 8));
 
         idField.setEditable(false);
+        statusField.setEditable(false);
+        approvedRawUpdatedAtField.setEditable(false);
         createdField.setEditable(false);
         updatedField.setEditable(false);
 
@@ -50,6 +56,8 @@ public class EntryEditorPanel extends JPanel {
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
 
+        staleWarningLabel.setForeground(new Color(180, 80, 0));
+
         rawEntryComboBox.addActionListener(event -> refreshLinkedRawPreview());
 
         add(buildMetaPanel(), BorderLayout.NORTH);
@@ -60,7 +68,7 @@ public class EntryEditorPanel extends JPanel {
     }
 
     private JComponent buildMetaPanel() {
-        JPanel meta = new JPanel(new GridLayout(6, 2, 8, 8));
+        JPanel meta = new JPanel(new GridLayout(8, 2, 8, 8));
         meta.setBorder(BorderFactory.createTitledBorder("Metadata"));
 
         meta.add(new JLabel("ID"));
@@ -68,6 +76,12 @@ public class EntryEditorPanel extends JPanel {
 
         meta.add(new JLabel("Linked raw entry"));
         meta.add(rawEntryComboBox);
+
+        meta.add(new JLabel("Status"));
+        meta.add(statusField);
+
+        meta.add(new JLabel("Approved against raw updated at"));
+        meta.add(approvedRawUpdatedAtField);
 
         meta.add(new JLabel("Created"));
         meta.add(createdField);
@@ -114,6 +128,7 @@ public class EntryEditorPanel extends JPanel {
     private JComponent buildBottomPanel() {
         JPanel bottom = new JPanel(new BorderLayout(8, 8));
         bottom.setBorder(BorderFactory.createTitledBorder("Description"));
+        bottom.add(staleWarningLabel, BorderLayout.NORTH);
         bottom.add(new JScrollPane(descriptionArea), BorderLayout.CENTER);
         return bottom;
     }
@@ -131,6 +146,8 @@ public class EntryEditorPanel extends JPanel {
         if (entry == null) {
             idField.setText("");
             rawEntryComboBox.setSelectedIndex(-1);
+            statusField.setText("");
+            approvedRawUpdatedAtField.setText("");
             createdField.setText("");
             updatedField.setText("");
             translationField.setText("");
@@ -140,17 +157,23 @@ public class EntryEditorPanel extends JPanel {
             rawGlossArea.setText("");
             descriptionArea.setText("");
             approvedBox.setSelected(false);
+            staleWarningLabel.setText(" ");
             return;
         }
 
         idField.setText(entry.getId() == null ? "" : String.valueOf(entry.getId()));
-        createdField.setText(entry.getCreatedAt() == null ? "" : String.valueOf(entry.getCreatedAt()));
-        updatedField.setText(entry.getUpdatedAt() == null ? "" : String.valueOf(entry.getUpdatedAt()));
+        statusField.setText(entry.workflowStatusLabel());
+        approvedRawUpdatedAtField.setText(formatInstant(entry.getApprovedRawUpdatedAt()));
+        createdField.setText(formatInstant(entry.getCreatedAt()));
+        updatedField.setText(formatInstant(entry.getUpdatedAt()));
         translationField.setText(nullSafe(entry.getTranslationText()));
         correctedTextArea.setText(nullSafe(entry.getRawText()));
         correctedGlossArea.setText(nullSafe(entry.getGlossText()));
         approvedBox.setSelected(Boolean.TRUE.equals(entry.getIsCorrect()));
         descriptionArea.setText(nullSafe(entry.getDescription()));
+        staleWarningLabel.setText(entry.isStale()
+                ? "Warning: this approved correction is outdated because the linked raw entry changed after approval."
+                : " ");
 
         Long linkedRawId = entry.getRawEntry() == null ? null : entry.getRawEntry().getId();
         selectRawEntry(linkedRawId);
@@ -242,6 +265,10 @@ public class EntryEditorPanel extends JPanel {
             preview = preview.substring(0, 47) + "...";
         }
         return "#" + raw.getId() + " — " + preview;
+    }
+
+    private static String formatInstant(Instant instant) {
+        return instant == null ? "" : instant.toString();
     }
 
     private static String nullSafe(String value) {

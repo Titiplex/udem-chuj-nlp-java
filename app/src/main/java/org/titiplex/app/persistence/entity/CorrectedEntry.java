@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
+
 @Entity
 @Getter
 @Setter
@@ -16,4 +18,17 @@ public class CorrectedEntry extends Entry {
 
     @Column(name = "is_correct")
     private Boolean isCorrect;
+
+    @Column(name = "stale", nullable = false)
+    private boolean stale = false;
+
+    @Column(name = "approved_raw_updated_at")
+    private Instant approvedRawUpdatedAt;
+
+    public String workflowStatusLabel() {
+        if (Boolean.TRUE.equals(isCorrect)) {
+            return stale ? "Approved (stale)" : "Approved";
+        }
+        return "Draft";
+    }
 }

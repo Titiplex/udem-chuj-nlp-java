@@ -113,16 +113,15 @@ public class RawEntryPanel extends JPanel {
     private void saveCurrentEntry() {
         try {
             RawEntry saved = rawEntryService.save(editorPanel.toEntry());
-            refreshCoordinator.publish(AppRefreshCoordinator.Topic.RAW_ENTRIES);
+            refreshCoordinator.publish(AppRefreshCoordinator.Topic.RAW_ENTRIES, AppRefreshCoordinator.Topic.CORRECTED_ENTRIES);
 
             if (editorPanel.isAutoApplyRulesSelected()) {
-                autoCorrectionService.applyToRawEntry(saved);
+                var corrected = autoCorrectionService.applyToRawEntry(saved);
                 refreshCoordinator.publish(AppRefreshCoordinator.Topic.CORRECTED_ENTRIES);
-                statusConsumer.accept("Raw entry saved and rules applied: #" + saved.getId());
-                Dialogs.info(this, "Raw entry saved and rules applied.");
+                showCorrectionResultAfterRawSave(saved.getId(), corrected.isStale(), Boolean.TRUE.equals(corrected.getIsCorrect()));
             } else {
                 statusConsumer.accept("Raw entry saved: #" + saved.getId());
-                Dialogs.info(this, "Raw entry saved.");
+                Dialogs.info(this, "Raw entry saved. Linked approved corrections may now appear as stale.");
             }
 
             refresh();
@@ -143,7 +142,10 @@ public class RawEntryPanel extends JPanel {
             var corrected = autoCorrectionService.applyToRawEntry(entry);
             refreshCoordinator.publish(AppRefreshCoordinator.Topic.CORRECTED_ENTRIES);
 
-            if (Boolean.TRUE.equals(corrected.getIsCorrect())) {
+            if (Boolean.TRUE.equals(corrected.getIsCorrect()) && corrected.isStale()) {
+                Dialogs.info(this, "Linked corrected entry is approved, so it was preserved and marked stale.");
+                statusConsumer.accept("Approved corrected entry preserved and marked stale.");
+            } else if (Boolean.TRUE.equals(corrected.getIsCorrect())) {
                 Dialogs.info(this, "Linked corrected entry is approved, so it was not overwritten.");
                 statusConsumer.accept("Approved corrected entry preserved.");
             } else {
@@ -159,7 +161,7 @@ public class RawEntryPanel extends JPanel {
         try {
             int count = autoCorrectionService.applyToAll(rawEntryService.getAll());
             refreshCoordinator.publish(AppRefreshCoordinator.Topic.CORRECTED_ENTRIES);
-            Dialogs.info(this, "Rules applied to " + count + " raw entrie(s). Approved entries were preserved.");
+            Dialogs.info(this, "Rules applied to " + count + " raw entrie(s). Approved entries were preserved and may have been marked stale.");
             statusConsumer.accept("Rules applied to " + count + " raw entrie(s).");
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to apply rules to all raw entries", exception);
@@ -188,6 +190,19 @@ public class RawEntryPanel extends JPanel {
             statusConsumer.accept("Raw entry deleted: #" + entry.getId());
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to delete raw entry", exception);
+        }
+    }
+
+    private void showCorrectionResultAfterRawSave(Long rawEntryId, boolean stale, boolean approved) {
+        if (approved && stale) {
+            statusConsumer.accept("Raw entry saved. Approved corrected entry preserved and marked stale: #" + rawEntryId);
+            Dialogs.info(this, "Raw entry saved. The linked corrected entry is approved, so it was preserved and marked stale.");
+        } else if (approved) {
+            statusConsumer.accept("Raw entry saved. Approved corrected entry preserved: #" + rawEntryId);
+            Dialogs.info(this, "Raw entry saved. The linked corrected entry is approved, so it was preserved.");
+        } else {
+            statusConsumer.accept("Raw entry saved and rules applied: #" + rawEntryId);
+            Dialogs.info(this, "Raw entry saved and rules applied.");
         }
     }
 }

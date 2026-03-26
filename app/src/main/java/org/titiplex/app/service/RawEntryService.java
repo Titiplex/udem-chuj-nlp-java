@@ -7,6 +7,7 @@ import org.titiplex.app.persistence.entity.RawEntry;
 import org.titiplex.app.persistence.repository.CorrectedEntryRepository;
 import org.titiplex.app.persistence.repository.RawEntryRepository;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -34,7 +35,9 @@ public class RawEntryService {
     }
 
     public RawEntry save(RawEntry entry) {
-        return repository.save(entry);
+        RawEntry saved = repository.saveAndFlush(entry);
+        markLinkedApprovedCorrectionAsStaleIfNeeded(saved);
+        return saved;
     }
 
     public void delete(Long id) {
@@ -45,5 +48,30 @@ public class RawEntryService {
             );
         }
         repository.deleteById(id);
+    }
+
+    private void markLinkedApprovedCorrectionAsStaleIfNeeded(RawEntry saved) {
+        if (saved.getId() == null) {
+            return;
+        }
+
+        CorrectedEntry linked = correctedEntryRepository.findByRawEntryId(saved.getId()).orElse(null);
+        if (linked == null || !Boolean.TRUE.equals(linked.getIsCorrect())) {
+            return;
+        }
+
+        if (!hasRawMovedSinceApproval(saved.getUpdatedAt(), linked.getApprovedRawUpdatedAt()) || linked.isStale()) {
+            return;
+        }
+
+        linked.setStale(true);
+        correctedEntryRepository.save(linked);
+    }
+
+    private static boolean hasRawMovedSinceApproval(Instant rawUpdatedAt, Instant approvedRawUpdatedAt) {
+        if (approvedRawUpdatedAt == null) {
+            return true;
+        }
+        return rawUpdatedAt != null && rawUpdatedAt.isAfter(approvedRawUpdatedAt);
     }
 }
