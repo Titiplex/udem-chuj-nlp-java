@@ -25,6 +25,9 @@ public class CorrectedEntry extends Entry {
     @Column(name = "approved_raw_updated_at")
     private Instant approvedRawUpdatedAt;
 
+    @Column(name = "approved_rules_fingerprint", length = 128)
+    private String approvedRulesFingerprint;
+
     public String workflowStatusLabel() {
         if (Boolean.TRUE.equals(isCorrect)) {
             return stale ? "Approved (stale)" : "Approved";

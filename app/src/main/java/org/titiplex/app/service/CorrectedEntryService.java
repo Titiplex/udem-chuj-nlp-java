@@ -13,9 +13,14 @@ import java.util.Optional;
 @Transactional
 public class CorrectedEntryService {
     private final CorrectedEntryRepository repository;
+    private final RulesetFingerprintService rulesetFingerprintService;
 
-    public CorrectedEntryService(CorrectedEntryRepository repository) {
+    public CorrectedEntryService(
+            CorrectedEntryRepository repository,
+            RulesetFingerprintService rulesetFingerprintService
+    ) {
         this.repository = repository;
+        this.rulesetFingerprintService = rulesetFingerprintService;
     }
 
     @Transactional(readOnly = true)
@@ -65,10 +70,12 @@ public class CorrectedEntryService {
             entry.setStale(false);
             RawEntry rawEntry = entry.getRawEntry();
             entry.setApprovedRawUpdatedAt(rawEntry == null ? null : rawEntry.getUpdatedAt());
+            entry.setApprovedRulesFingerprint(rulesetFingerprintService.currentCorrectionRulesetFingerprint());
             return;
         }
 
         entry.setStale(false);
         entry.setApprovedRawUpdatedAt(null);
+        entry.setApprovedRulesFingerprint(null);
     }
 }

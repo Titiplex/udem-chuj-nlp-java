@@ -19,13 +19,16 @@ import java.util.List;
 public class AutoCorrectionService {
     private final DesktopPipelineFactory pipelineFactory;
     private final CorrectedEntryRepository correctedEntryRepository;
+    private final RulesetFingerprintService rulesetFingerprintService;
 
     public AutoCorrectionService(
             DesktopPipelineFactory pipelineFactory,
-            CorrectedEntryRepository correctedEntryRepository
+            CorrectedEntryRepository correctedEntryRepository,
+            RulesetFingerprintService rulesetFingerprintService
     ) {
         this.pipelineFactory = pipelineFactory;
         this.correctedEntryRepository = correctedEntryRepository;
+        this.rulesetFingerprintService = rulesetFingerprintService;
     }
 
     public CorrectedEntry applyToRawEntry(RawEntry rawEntry) {
@@ -34,7 +37,10 @@ public class AutoCorrectionService {
                 : correctedEntryRepository.findByRawEntryId(rawEntry.getId()).orElse(null);
 
         if (existing != null && Boolean.TRUE.equals(existing.getIsCorrect())) {
-            if (shouldMarkApprovedEntryAsStale(existing, rawEntry)) {
+            boolean staleNow = hasRawMovedSinceApproval(rawEntry.getUpdatedAt(), existing.getApprovedRawUpdatedAt())
+                    || rulesetFingerprintService.isCorrectionRulesetOutdated(existing);
+
+            if (staleNow && !existing.isStale()) {
                 existing.setStale(true);
                 correctedEntryRepository.save(existing);
             }
@@ -67,9 +73,6 @@ public class AutoCorrectionService {
         if (target.getIsCorrect() == null) {
             target.setIsCorrect(false);
         }
-        if (!Boolean.TRUE.equals(target.getIsCorrect())) {
-            target.setApprovedRawUpdatedAt(null);
-        }
 
         return correctedEntryRepository.save(target);
     }
@@ -83,14 +86,7 @@ public class AutoCorrectionService {
         return count;
     }
 
-    private static boolean shouldMarkApprovedEntryAsStale(CorrectedEntry existing, RawEntry rawEntry) {
-        if (existing.isStale()) {
-            return false;
-        }
-
-        Instant approvedRawUpdatedAt = existing.getApprovedRawUpdatedAt();
-        Instant rawUpdatedAt = rawEntry.getUpdatedAt();
-
+    private static boolean hasRawMovedSinceApproval(Instant rawUpdatedAt, Instant approvedRawUpdatedAt) {
         if (approvedRawUpdatedAt == null) {
             return true;
         }

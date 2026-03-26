@@ -26,54 +26,55 @@ class AutoCorrectionServiceTest {
     @Mock
     private CorrectedEntryRepository correctedEntryRepository;
 
+    @Mock
+    private RulesetFingerprintService rulesetFingerprintService;
+
     private AutoCorrectionService service;
 
     @BeforeEach
     void setUp() {
-        service = new AutoCorrectionService(pipelineFactory, correctedEntryRepository);
+        service = new AutoCorrectionService(pipelineFactory, correctedEntryRepository, rulesetFingerprintService);
     }
 
     @Test
-    void returnsExistingApprovedEntryWithoutReprocessingWhenRawDidNotMove() {
-        Instant snapshot = Instant.parse("2026-03-25T12:00:00Z");
-        RawEntry raw = rawEntry(1L, "ha tin", "A1 win", "I win", snapshot);
+    void returnsExistingApprovedEntryWithoutReprocessing() {
+        RawEntry raw = rawEntry(1L, "ha tin", "A1 win", "I win");
+        raw.setUpdatedAt(Instant.parse("2026-03-26T12:00:00Z"));
         CorrectedEntry approved = correctedEntry(raw, true);
-        approved.setApprovedRawUpdatedAt(snapshot);
-        approved.setStale(false);
+        approved.setApprovedRawUpdatedAt(raw.getUpdatedAt());
 
         when(correctedEntryRepository.findByRawEntryId(1L)).thenReturn(Optional.of(approved));
+        when(rulesetFingerprintService.isCorrectionRulesetOutdated(approved)).thenReturn(false);
 
         CorrectedEntry result = service.applyToRawEntry(raw);
 
         assertThat(result).isSameAs(approved);
-        assertThat(result.isStale()).isFalse();
         verifyNoInteractions(pipelineFactory);
         verify(correctedEntryRepository, never()).save(any());
     }
 
     @Test
-    void marksApprovedEntryStaleWhenRawMovedAfterApproval() {
-        Instant approvedAt = Instant.parse("2026-03-25T12:00:00Z");
-        Instant rawUpdatedAt = Instant.parse("2026-03-26T12:00:00Z");
-        RawEntry raw = rawEntry(1L, "ha tin", "A1 win", "I win", rawUpdatedAt);
+    void marksApprovedEntryStaleWhenRulesChanged() {
+        RawEntry raw = rawEntry(1L, "ha tin", "A1 win", "I win");
+        raw.setUpdatedAt(Instant.parse("2026-03-26T12:00:00Z"));
         CorrectedEntry approved = correctedEntry(raw, true);
-        approved.setApprovedRawUpdatedAt(approvedAt);
+        approved.setApprovedRawUpdatedAt(raw.getUpdatedAt());
         approved.setStale(false);
 
         when(correctedEntryRepository.findByRawEntryId(1L)).thenReturn(Optional.of(approved));
-        when(correctedEntryRepository.save(approved)).thenReturn(approved);
+        when(rulesetFingerprintService.isCorrectionRulesetOutdated(approved)).thenReturn(true);
 
         CorrectedEntry result = service.applyToRawEntry(raw);
 
         assertThat(result).isSameAs(approved);
         assertThat(result.isStale()).isTrue();
-        verifyNoInteractions(pipelineFactory);
         verify(correctedEntryRepository).save(approved);
+        verifyNoInteractions(pipelineFactory);
     }
 
     @Test
     void createsNewCorrectedEntryWhenNoneExists() {
-        RawEntry raw = rawEntry(7L, "ha tin", "A1 win", "I win", Instant.parse("2026-03-25T12:00:00Z"));
+        RawEntry raw = rawEntry(7L, "ha tin", "A1 win", "I win");
         when(correctedEntryRepository.findByRawEntryId(7L)).thenReturn(Optional.empty());
         when(pipelineFactory.createRuleEngine()).thenReturn(new RuleEngine(List.of()));
         when(correctedEntryRepository.save(any(CorrectedEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -86,18 +87,16 @@ class AutoCorrectionServiceTest {
         assertThat(saved.getTranslationText()).isEqualTo("I win");
         assertThat(saved.getIsCorrect()).isFalse();
         assertThat(saved.isStale()).isFalse();
-        assertThat(saved.getApprovedRawUpdatedAt()).isNull();
         verify(correctedEntryRepository).save(any(CorrectedEntry.class));
     }
 
     @Test
     void updatesExistingNonApprovedEntry() {
-        RawEntry raw = rawEntry(9L, "ha tin", "A1 win", "I win", Instant.parse("2026-03-25T12:00:00Z"));
+        RawEntry raw = rawEntry(9L, "ha tin", "A1 win", "I win");
         CorrectedEntry pending = correctedEntry(raw, false);
         pending.setRawText("old");
         pending.setGlossText("old");
         pending.setTranslationText("old");
-        pending.setStale(true);
 
         when(correctedEntryRepository.findByRawEntryId(9L)).thenReturn(Optional.of(pending));
         when(pipelineFactory.createRuleEngine()).thenReturn(new RuleEngine(List.of()));
@@ -110,13 +109,12 @@ class AutoCorrectionServiceTest {
         assertThat(saved.getGlossText()).isEqualTo("A1 win");
         assertThat(saved.getTranslationText()).isEqualTo("I win");
         assertThat(saved.getDescription()).contains("Generated from raw entry #9");
-        assertThat(saved.isStale()).isFalse();
     }
 
     @Test
     void applyToAllReturnsProcessedCount() {
-        RawEntry first = rawEntry(1L, "a", "b", "c", Instant.parse("2026-03-25T12:00:00Z"));
-        RawEntry second = rawEntry(2L, "d", "e", "f", Instant.parse("2026-03-25T12:00:00Z"));
+        RawEntry first = rawEntry(1L, "a", "b", "c");
+        RawEntry second = rawEntry(2L, "d", "e", "f");
 
         when(correctedEntryRepository.findByRawEntryId(anyLong())).thenReturn(Optional.empty());
         when(pipelineFactory.createRuleEngine()).thenReturn(new RuleEngine(List.of()));
@@ -128,13 +126,12 @@ class AutoCorrectionServiceTest {
         verify(correctedEntryRepository, times(2)).save(any(CorrectedEntry.class));
     }
 
-    private static RawEntry rawEntry(Long id, String rawText, String glossText, String translationText, Instant updatedAt) {
+    private static RawEntry rawEntry(Long id, String rawText, String glossText, String translationText) {
         RawEntry raw = new RawEntry();
         raw.setId(id);
         raw.setRawText(rawText);
         raw.setGlossText(glossText);
         raw.setTranslationText(translationText);
-        raw.setUpdatedAt(updatedAt);
         return raw;
     }
 

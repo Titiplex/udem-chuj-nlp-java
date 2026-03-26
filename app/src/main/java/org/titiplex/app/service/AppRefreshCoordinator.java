@@ -13,7 +13,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class AppRefreshCoordinator {
     public enum Topic {
         RAW_ENTRIES,
-        CORRECTED_ENTRIES
+        CORRECTED_ENTRIES,
+        CORRECTION_RULES
     }
 
     private final Map<Topic, List<Runnable>> listeners = new EnumMap<>(Topic.class);

@@ -56,6 +56,10 @@ public class RuleService {
         if (rule.getKind() == null) {
             rule.setKind(RuleKind.CORRECTION);
         }
+        Rule existing = rule.getStableId() == null ? null : ruleRepository.findByStableId(rule.getStableId()).orElse(null);
+        if (existing != null && (rule.getId() == null || !existing.getId().equals(rule.getId()))) {
+            throw new IllegalStateException("A rule with stable id '" + rule.getStableId() + "' already exists.");
+        }
         return ruleRepository.save(rule);
     }
 

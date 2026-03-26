@@ -3,6 +3,8 @@ package org.titiplex.app.ui.rule;
 import org.titiplex.app.domain.validation.ValidationRun;
 import org.titiplex.app.persistence.entity.Rule;
 import org.titiplex.app.persistence.entity.RuleKind;
+import org.titiplex.app.service.AppRefreshCoordinator;
+import org.titiplex.app.service.CorrectedEntryStalenessService;
 import org.titiplex.app.service.RuleService;
 import org.titiplex.app.ui.common.Dialogs;
 import org.titiplex.app.ui.common.ValidationDialogs;
@@ -21,10 +23,19 @@ public final class RulePanel extends JPanel {
     private final JTable table = new JTable(tableModel);
 
     private final RuleService ruleService;
+    private final CorrectedEntryStalenessService correctedEntryStalenessService;
+    private final AppRefreshCoordinator refreshCoordinator;
     private final Consumer<String> statusConsumer;
 
-    public RulePanel(RuleService ruleService, Consumer<String> statusConsumer) {
+    public RulePanel(
+            RuleService ruleService,
+            CorrectedEntryStalenessService correctedEntryStalenessService,
+            AppRefreshCoordinator refreshCoordinator,
+            Consumer<String> statusConsumer
+    ) {
         this.ruleService = ruleService;
+        this.correctedEntryStalenessService = correctedEntryStalenessService;
+        this.refreshCoordinator = refreshCoordinator;
         this.statusConsumer = statusConsumer;
 
         setLayout(new BorderLayout(8, 8));
@@ -107,8 +118,9 @@ public final class RulePanel extends JPanel {
     public void importYaml(Path path) {
         try {
             int count = ruleService.importYaml(path, getSelectedKind());
+            int staleMarked = afterCorrectionRuleChange();
             refresh();
-            statusConsumer.accept("Imported " + count + " " + getSelectedKind() + " rule(s).");
+            statusConsumer.accept(buildRuleChangeStatus("Imported " + count + " " + getSelectedKind() + " rule(s).", staleMarked));
             Dialogs.info(this, "Imported " + count + " rule(s).");
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to import YAML", exception);
@@ -174,20 +186,38 @@ public final class RulePanel extends JPanel {
         }
 
         ruleService.delete(rule.getId());
+        int staleMarked = rule.getKind() == RuleKind.CORRECTION ? afterCorrectionRuleChange() : 0;
         refresh();
         editorPanel.setRule(null);
-        statusConsumer.accept("Rule deleted: " + rule.getStableId());
+        statusConsumer.accept(buildRuleChangeStatus("Rule deleted: " + rule.getStableId(), staleMarked));
     }
 
     private void saveCurrentRule() {
         try {
             Rule saved = ruleService.save(editorPanel.toRule());
+            int staleMarked = saved.getKind() == RuleKind.CORRECTION ? afterCorrectionRuleChange() : 0;
             refresh();
             editorPanel.setRule(saved);
-            statusConsumer.accept("Rule saved: " + saved.getStableId());
+            statusConsumer.accept(buildRuleChangeStatus("Rule saved: " + saved.getStableId(), staleMarked));
             Dialogs.info(this, "Rule saved.");
         } catch (Exception exception) {
             Dialogs.error(this, "Failed to save rule", exception);
         }
+    }
+
+    private int afterCorrectionRuleChange() {
+        int staleMarked = correctedEntryStalenessService.markApprovedEntriesStaleIfRulesChanged();
+        refreshCoordinator.publish(
+                AppRefreshCoordinator.Topic.CORRECTION_RULES,
+                AppRefreshCoordinator.Topic.CORRECTED_ENTRIES
+        );
+        return staleMarked;
+    }
+
+    private String buildRuleChangeStatus(String base, int staleMarked) {
+        if (staleMarked <= 0) {
+            return base;
+        }
+        return base + " " + staleMarked + " approved corrected entrie(s) marked stale.";
     }
 }

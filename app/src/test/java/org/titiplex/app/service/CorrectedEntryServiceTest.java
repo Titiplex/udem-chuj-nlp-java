@@ -21,6 +21,9 @@ class CorrectedEntryServiceTest {
     @Mock
     private CorrectedEntryRepository repository;
 
+    @Mock
+    private RulesetFingerprintService rulesetFingerprintService;
+
     @InjectMocks
     private CorrectedEntryService service;
 
@@ -61,51 +64,27 @@ class CorrectedEntryServiceTest {
 
         assertEquals(99L, saved.getId());
         assertNotEquals(Boolean.TRUE, saved.getIsCorrect());
-        assertFalse(saved.isStale());
     }
 
     @Test
-    void saveApprovedEntryStoresApprovalSnapshotAndClearsStale() {
-        Instant rawUpdatedAt = Instant.parse("2026-03-25T12:00:00Z");
+    void saveApprovedEntryCapturesCurrentRulesetFingerprint() {
         RawEntry rawEntry = new RawEntry();
         rawEntry.setId(11L);
-        rawEntry.setUpdatedAt(rawUpdatedAt);
+        rawEntry.setUpdatedAt(Instant.parse("2026-03-26T12:00:00Z"));
 
         CorrectedEntry incoming = new CorrectedEntry();
         incoming.setId(99L);
         incoming.setRawEntry(rawEntry);
         incoming.setIsCorrect(true);
-        incoming.setStale(true);
 
         when(repository.findByRawEntryId(11L)).thenReturn(Optional.of(incoming));
+        when(rulesetFingerprintService.currentCorrectionRulesetFingerprint()).thenReturn("fingerprint-1");
         when(repository.saveAndFlush(incoming)).thenReturn(incoming);
 
-        CorrectedEntry saved = service.save(incoming);
+        CorrectedEntry saved = assertDoesNotThrow(() -> service.save(incoming));
 
-        assertTrue(saved.getIsCorrect());
+        assertEquals("fingerprint-1", saved.getApprovedRulesFingerprint());
         assertFalse(saved.isStale());
-        assertEquals(rawUpdatedAt, saved.getApprovedRawUpdatedAt());
-    }
-
-    @Test
-    void saveDraftClearsApprovalSnapshotAndStaleFlag() {
-        RawEntry rawEntry = new RawEntry();
-        rawEntry.setId(11L);
-
-        CorrectedEntry incoming = new CorrectedEntry();
-        incoming.setId(99L);
-        incoming.setRawEntry(rawEntry);
-        incoming.setIsCorrect(false);
-        incoming.setStale(true);
-        incoming.setApprovedRawUpdatedAt(Instant.parse("2026-03-25T12:00:00Z"));
-
-        when(repository.findByRawEntryId(11L)).thenReturn(Optional.of(incoming));
-        when(repository.saveAndFlush(incoming)).thenReturn(incoming);
-
-        CorrectedEntry saved = service.save(incoming);
-
-        assertFalse(saved.getIsCorrect());
-        assertFalse(saved.isStale());
-        assertNull(saved.getApprovedRawUpdatedAt());
+        assertEquals(rawEntry.getUpdatedAt(), saved.getApprovedRawUpdatedAt());
     }
 }

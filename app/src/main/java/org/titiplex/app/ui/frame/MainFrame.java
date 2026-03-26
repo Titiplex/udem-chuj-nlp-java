@@ -22,7 +22,6 @@ public class MainFrame extends JFrame {
     private final RawEntryPanel rawEntryPanel;
     private final ConlluPanel conlluPanel;
     private final DesktopExportService exportService;
-
     private Runnable quitAction = this::dispose;
 
     public MainFrame(
@@ -34,7 +33,8 @@ public class MainFrame extends JFrame {
             DesktopExportService exportService,
             AnnotationConfigStateService annotationConfigStateService,
             ConlluPreviewService conlluPreviewService,
-            AppRefreshCoordinator refreshCoordinator
+            AppRefreshCoordinator refreshCoordinator,
+            CorrectedEntryStalenessService correctedEntryStalenessService
     ) {
         super("Chuj NLP Studio");
 
@@ -46,7 +46,12 @@ public class MainFrame extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        this.rulePanel = new RulePanel(ruleService, this::setStatus);
+        this.rulePanel = new RulePanel(
+                ruleService,
+                correctedEntryStalenessService,
+                refreshCoordinator,
+                this::setStatus
+        );
         this.entryPanel = new EntryPanel(
                 correctedEntryService,
                 rawEntryService,
