@@ -156,15 +156,16 @@ public final class RuleEditorPanel extends JPanel {
             throw new IllegalArgumentException("Rule name cannot be blank");
         }
 
+        RuleKind kind = (RuleKind) kindBox.getSelectedItem();
         String description = descriptionArea.getText().trim();
-        String normalizedYaml = normalizeYamlMetadata(yamlArea.getText(), stableId, name, description);
+        String normalizedYaml = normalizeYamlMetadata(yamlArea.getText(), stableId, name, description, kind);
 
         Instant now = Instant.now();
         return new Rule(
                 currentRule == null ? null : currentRule.getId(),
                 stableId,
                 name,
-                (RuleKind) kindBox.getSelectedItem(),
+                kind,
                 enabledBox.isSelected(),
                 normalizedYaml,
                 currentRule == null ? "desktop-editor" : currentRule.getSourceFile(),
@@ -175,7 +176,13 @@ public final class RuleEditorPanel extends JPanel {
         );
     }
 
-    private String normalizeYamlMetadata(String yamlBody, String stableId, String name, String description) {
+    private String normalizeYamlMetadata(
+            String yamlBody,
+            String stableId,
+            String name,
+            String description,
+            RuleKind kind
+    ) {
         if (yamlBody == null || yamlBody.isBlank()) {
             throw new IllegalArgumentException("YAML body cannot be blank");
         }
@@ -191,11 +198,30 @@ public final class RuleEditorPanel extends JPanel {
         }
 
         Object rawRules = root.get("rules");
-        if (!(rawRules instanceof List<?> rules) || rules.isEmpty()) {
-            throw new IllegalArgumentException("YAML body must contain a non-empty 'rules' list");
+        List<Object> rules = new ArrayList<>();
+
+        if (rawRules == null) {
+            if (kind != RuleKind.CONLLU) {
+                throw new IllegalArgumentException("Correction YAML body must contain exactly one rule");
+            }
+            return yaml.dump(root);
         }
+
+        if (!(rawRules instanceof List<?> ruleList)) {
+            throw new IllegalArgumentException("'rules' must be a YAML list");
+        }
+
+        rules.addAll(ruleList);
+
+        if (rules.isEmpty()) {
+            if (kind != RuleKind.CONLLU) {
+                throw new IllegalArgumentException("Correction YAML body must contain exactly one rule");
+            }
+            return yaml.dump(root);
+        }
+
         if (rules.size() != 1) {
-            throw new IllegalArgumentException("Desktop rule editor expects exactly one rule in the YAML body.");
+            throw new IllegalArgumentException("Desktop editor expects exactly one rule in the YAML body");
         }
 
         Object firstRuleRaw = rules.get(0);
@@ -216,9 +242,8 @@ public final class RuleEditorPanel extends JPanel {
             firstRule.put("description", description);
         }
 
-        List<Object> newRules = new ArrayList<>(rules);
-        newRules.set(0, firstRule);
-        root.put("rules", newRules);
+        rules.set(0, firstRule);
+        root.put("rules", rules);
 
         return yaml.dump(root);
     }

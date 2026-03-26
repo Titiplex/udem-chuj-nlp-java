@@ -2,6 +2,7 @@ package org.titiplex.app.ui.rule;
 
 import org.junit.jupiter.api.Test;
 import org.titiplex.app.persistence.entity.Rule;
+import org.titiplex.app.persistence.entity.RuleKind;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.swing.*;
@@ -9,8 +10,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"SequencedCollectionMethodCanBeUsed", "unchecked"})
 class RuleEditorPanelTest {
@@ -46,32 +46,55 @@ class RuleEditorPanelTest {
     }
 
     @Test
-    void toRuleRejectsYamlWithoutRulesList() throws Exception {
-        RuleEditorPanel panel = new RuleEditorPanel();
-
-        getField(panel, "ruleIdField", JTextField.class).setText("edited_rule");
-        getField(panel, "nameField", JTextField.class).setText("Edited Rule");
-        getField(panel, "yamlArea", JTextArea.class).setText("def:\n  pos: [VERB]\n");
-
-        assertThrows(IllegalArgumentException.class, panel::toRule);
-    }
-
-    @Test
-    void toRuleRejectsMultipleRulesInDesktopEditor() throws Exception {
+    void toRuleRejectsYamlWithMultipleRules() throws Exception {
         RuleEditorPanel panel = new RuleEditorPanel();
 
         getField(panel, "ruleIdField", JTextField.class).setText("edited_rule");
         getField(panel, "nameField", JTextField.class).setText("Edited Rule");
         getField(panel, "yamlArea", JTextArea.class).setText("""
                 rules:
-                  - id: first
-                    name: First
-                  - id: second
-                    name: Second
+                  - id: a
+                    name: A
+                  - id: b
+                    name: B
                 """);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, panel::toRule);
-        assertEquals("Desktop rule editor expects exactly one rule in the YAML body.", exception.getMessage());
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, panel::toRule);
+        assertTrue(ex.getMessage().contains("exactly one rule"));
+    }
+
+    @Test
+    void toRuleRejectsCorrectionYamlWithoutRules() throws Exception {
+        RuleEditorPanel panel = new RuleEditorPanel();
+
+        getField(panel, "ruleIdField", JTextField.class).setText("edited_rule");
+        getField(panel, "nameField", JTextField.class).setText("Edited Rule");
+        getField(panel, "kindBox", JComboBox.class).setSelectedItem(RuleKind.CORRECTION);
+        getField(panel, "yamlArea", JTextArea.class).setText("def:\n  pos: [VERB]\n");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, panel::toRule);
+        assertTrue(ex.getMessage().contains("must contain exactly one rule"));
+    }
+
+    @Test
+    void toRuleAllowsConlluGlobalConfigWithoutRules() throws Exception {
+        RuleEditorPanel panel = new RuleEditorPanel();
+
+        getField(panel, "ruleIdField", JTextField.class).setText("globals");
+        getField(panel, "nameField", JTextField.class).setText("Globals");
+        getField(panel, "kindBox", JComboBox.class).setSelectedItem(RuleKind.CONLLU);
+        getField(panel, "yamlArea", JTextArea.class).setText("""
+                def:
+                  pos: [VERB]
+                lexicons:
+                  verbs: verbs.txt
+                """);
+
+        Rule rule = panel.toRule();
+
+        Map<String, Object> root = new Yaml().load(rule.getYamlBody());
+        assertEquals(Map.of("pos", List.of("VERB")), root.get("def"));
+        assertFalse(root.containsKey("rules"));
     }
 
     private static <T> T getField(Object target, String fieldName, Class<T> type) throws Exception {

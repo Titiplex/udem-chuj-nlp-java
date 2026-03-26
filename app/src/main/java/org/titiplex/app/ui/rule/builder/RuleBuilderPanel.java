@@ -118,6 +118,32 @@ public final class RuleBuilderPanel extends JPanel {
     private final StringListTablePanel extractorsFilePanel = new StringListTablePanel("extractors_file", "Path");
     private final StringListTablePanel rulesFilePanel = new StringListTablePanel("rules_file", "Path");
 
+    // correction sections
+    private JPanel correctionMatchGlossSection;
+    private JPanel correctionMatchTokensSection;
+    private JPanel correctionSurfaceSection;
+    private JPanel correctionBetweenTargetsSection;
+    private JPanel correctionRewriteBeforeAfterSection;
+    private JPanel correctionRewriteGlossOnlySection;
+    private JPanel correctionRegexSection;
+    private JPanel correctionSplitSuffixSection;
+    private JPanel correctionSplitSuffixFinalGlossSection;
+    private JPanel correctionDeleteSection;
+    private JPanel correctionInsertSection;
+    private JPanel correctionMergeSection;
+
+    // conllu sections
+    private JPanel conlluRuleMetaSection;
+    private JPanel conlluMatchSection;
+    private JPanel conlluSetUposSection;
+    private JPanel conlluSetFeatsSection;
+    private JPanel conlluSetExtractSection;
+    private JPanel conlluGlobalsLexiconSection;
+    private JPanel conlluGlobalsDefinitionsSection;
+    private JPanel conlluGlobalsGlossMapSection;
+    private JPanel conlluGlobalsExtractorSection;
+    private JPanel conlluGlobalsFilesSection;
+
     private Runnable loadIntoEditorAction;
     private final Yaml yaml;
 
@@ -216,100 +242,226 @@ public final class RuleBuilderPanel extends JPanel {
     }
 
     private JPanel buildCorrectionCard() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createTitledBorder("Correction rule"));
+        JPanel panel = verticalCard("Correction rule");
+
+        correctionMatchGlossSection = buildSection(
+                "Match · gloss",
+                matchGlossPanel,
+                labeledLine("match.gloss.in_lexicon", matchGlossInLexiconField),
+                matchGlossStartsWithPanel
+        );
+
+        correctionMatchTokensSection = buildSection(
+                "Match · tokens",
+                matchTokensIswordPanel,
+                matchTokensAnyPanel,
+                matchTokensStartsWithPanel,
+                matchTokensEndsWithPanel,
+                matchTokensHasSegmentPanel,
+                matchStartsWithVowelBox,
+                matchTokenSequencesPanel
+        );
+
+        correctionSurfaceSection = buildSection(
+                "Match · surface/root",
+                labeledLine("surface.side", surfaceSideField),
+                labeledLine("surface.root_in_lexicon", surfaceRootInLexiconField),
+                surfaceRootStartsWithVowelBox
+        );
+
+        correctionBetweenTargetsSection = buildSection(
+                "Match · relation / targets",
+                useBetweenLengthBox,
+                labeledLine("between.length", betweenLengthSpinner),
+                labeledLine("targets", targetsField)
+        );
+
+        correctionRewriteBeforeAfterSection = buildSection(
+                "Action · rewrite before/after",
+                labeledLine("surface before (csv)", surfaceBeforeField),
+                labeledLine("surface after (csv)", surfaceAfterField),
+                labeledLine("gloss before (csv)", glossBeforeField),
+                labeledLine("gloss after (csv)", glossAfterField)
+        );
+
+        correctionRewriteGlossOnlySection = buildSection(
+                "Action · gloss only rewrite",
+                labeledLine("gloss before (csv)", glossBeforeField),
+                labeledLine("gloss after (csv)", glossAfterField)
+        );
+
+        correctionRegexSection = buildSection(
+                "Action · regex substitution",
+                labeledLine("regex scope", regexScopeBox),
+                regexIgnoreCaseBox,
+                labeledLine("regex pattern", regexPatternField),
+                labeledLine("regex replacement", regexReplacementField)
+        );
+
+        correctionSplitSuffixSection = buildSection(
+                "Action · split suffix",
+                labeledLine("split suffixes (csv)", splitSuffixesField),
+                labeledLine("gloss placement", glossPlacementBox)
+        );
+
+        correctionSplitSuffixFinalGlossSection = buildSection(
+                "Action · split suffix with final gloss",
+                labeledLine("split suffixes (csv)", splitSuffixesField),
+                splitGlossLastStartsWithPanel
+        );
+
+        correctionDeleteSection = buildSection(
+                "Action · delete",
+                labeledLine("delete values (csv)", deleteValuesField)
+        );
+
+        correctionInsertSection = buildSection(
+                "Action · insert segment",
+                labeledLine("insert segment", insertSegmentField),
+                labeledLine("insert token", insertTokenSpinner),
+                labeledLine("insert position", insertPositionSpinner)
+        );
+
+        correctionMergeSection = buildSection(
+                "Action · merge tokens",
+                mergeSequencesPanel
+        );
 
         panel.add(labeledLine("Action", correctionActionBox));
-        panel.add(matchGlossPanel);
-        panel.add(matchGlossStartsWithPanel);
-        panel.add(labeledLine("match.gloss.in_lexicon", matchGlossInLexiconField));
-        panel.add(matchTokensIswordPanel);
-        panel.add(matchTokensAnyPanel);
-        panel.add(matchTokensStartsWithPanel);
-        panel.add(matchTokensEndsWithPanel);
-        panel.add(matchTokensHasSegmentPanel);
-        panel.add(matchStartsWithVowelBox);
-        panel.add(matchTokenSequencesPanel);
-        panel.add(labeledLine("surface.side", surfaceSideField));
-        panel.add(labeledLine("surface.root_in_lexicon", surfaceRootInLexiconField));
-        panel.add(surfaceRootStartsWithVowelBox);
-        panel.add(useBetweenLengthBox);
-        panel.add(labeledLine("between.length", betweenLengthSpinner));
-        panel.add(labeledLine("targets", targetsField));
-
-        panel.add(labeledLine("regex scope", regexScopeBox));
-        panel.add(regexIgnoreCaseBox);
-        panel.add(labeledLine("surface before (csv)", surfaceBeforeField));
-        panel.add(labeledLine("surface after (csv)", surfaceAfterField));
-        panel.add(labeledLine("gloss before (csv)", glossBeforeField));
-        panel.add(labeledLine("gloss after (csv)", glossAfterField));
-        panel.add(labeledLine("regex pattern", regexPatternField));
-        panel.add(labeledLine("regex replacement", regexReplacementField));
-        panel.add(labeledLine("split suffixes (csv)", splitSuffixesField));
-        panel.add(labeledLine("gloss placement", glossPlacementBox));
-        panel.add(splitGlossLastStartsWithPanel);
-        panel.add(labeledLine("delete values (csv)", deleteValuesField));
-        panel.add(labeledLine("insert segment", insertSegmentField));
-        panel.add(labeledLine("insert token", insertTokenSpinner));
-        panel.add(labeledLine("insert position", insertPositionSpinner));
-        panel.add(mergeSequencesPanel);
-
+        panel.add(correctionMatchGlossSection);
+        panel.add(correctionMatchTokensSection);
+        panel.add(correctionSurfaceSection);
+        panel.add(correctionBetweenTargetsSection);
+        panel.add(correctionRewriteBeforeAfterSection);
+        panel.add(correctionRewriteGlossOnlySection);
+        panel.add(correctionRegexSection);
+        panel.add(correctionSplitSuffixSection);
+        panel.add(correctionSplitSuffixFinalGlossSection);
+        panel.add(correctionDeleteSection);
+        panel.add(correctionInsertSection);
+        panel.add(correctionMergeSection);
         return panel;
     }
 
     private JPanel buildConlluCard() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createTitledBorder("CoNLL-U"));
+        JPanel panel = verticalCard("CoNLL-U");
 
-        panel.add(labeledLine("Mode", conlluModeBox));
-        panel.add(labeledLine("Scope", conlluScopeBox));
-        panel.add(labeledLine("Priority", conlluPrioritySpinner));
-        panel.add(labeledLine("match.regex", conlluMatchRegexField));
-        panel.add(labeledLine("match.gloss literal", conlluMatchGlossLiteralField));
-        panel.add(labeledLine("match.gloss.regex", conlluMatchGlossRegexField));
-        panel.add(labeledLine("match.gloss.in_lexicon", conlluMatchGlossInLexiconField));
+        conlluRuleMetaSection = buildSection(
+                "Rule · metadata",
+                labeledLine("Mode", conlluModeBox),
+                labeledLine("Scope", conlluScopeBox),
+                labeledLine("Priority", conlluPrioritySpinner)
+        );
 
-        panel.add(conlluMatchInListPanel);
-        panel.add(conlluMatchRequirePanel);
-        panel.add(conlluMatchForbidPanel);
-        panel.add(conlluMatchGlossInListPanel);
-        panel.add(conlluMatchGlossRequirePanel);
-        panel.add(conlluMatchGlossForbidPanel);
-        panel.add(conlluMatchExtractPanel);
+        conlluMatchSection = buildSection(
+                "Rule · match",
+                labeledLine("match.regex", conlluMatchRegexField),
+                labeledLine("match.gloss literal", conlluMatchGlossLiteralField),
+                labeledLine("match.gloss.regex", conlluMatchGlossRegexField),
+                labeledLine("match.gloss.in_lexicon", conlluMatchGlossInLexiconField),
+                conlluMatchInListPanel,
+                conlluMatchRequirePanel,
+                conlluMatchForbidPanel,
+                conlluMatchGlossInListPanel,
+                conlluMatchGlossRequirePanel,
+                conlluMatchGlossForbidPanel,
+                conlluMatchExtractPanel
+        );
 
-        panel.add(labeledLine("set.upos", conlluSetUposField));
-        panel.add(conlluFeatsPanel);
-        panel.add(conlluFeatsTemplatePanel);
-        panel.add(conlluSetExtractPanel);
+        conlluSetUposSection = buildSection(
+                "Rule · set.upos",
+                labeledLine("set.upos", conlluSetUposField)
+        );
 
-        panel.add(labeledLine("lexicon name", lexiconNameField));
+        conlluSetFeatsSection = buildSection(
+                "Rule · set.feats",
+                conlluFeatsPanel,
+                conlluFeatsTemplatePanel
+        );
+
+        conlluSetExtractSection = buildSection(
+                "Rule · set.extract",
+                conlluSetExtractPanel
+        );
 
         JPanel lexiconFilePanel = new JPanel(new BorderLayout(6, 0));
         lexiconFilePanel.add(lexiconFileField, BorderLayout.CENTER);
         JButton browseLexiconButton = new JButton("Browse...");
         browseLexiconButton.addActionListener(e -> chooseFileInto(lexiconFileField));
         lexiconFilePanel.add(browseLexiconButton, BorderLayout.EAST);
-        panel.add(labeledLine("lexicon file", lexiconFilePanel));
 
-        panel.add(defPosPanel);
-        panel.add(defFeatsPanel);
-        panel.add(glossMapPosPanel);
-        panel.add(glossMapFeatsPanel);
-        panel.add(labeledLine("extractor name", extractorNameField));
-        panel.add(extractorSeriesPanel);
-        panel.add(extractorPersonsPanel);
-        panel.add(labeledLine("extractor number suffix", extractorNumberSuffixField));
-        panel.add(routingRulePanel);
-        panel.add(extractorsFilePanel);
-        panel.add(rulesFilePanel);
+        conlluGlobalsLexiconSection = buildSection(
+                "Globals · lexicons",
+                labeledLine("lexicon name", lexiconNameField),
+                labeledLine("lexicon file", lexiconFilePanel)
+        );
 
+        conlluGlobalsDefinitionsSection = buildSection(
+                "Globals · definitions",
+                defPosPanel,
+                defFeatsPanel
+        );
+
+        conlluGlobalsGlossMapSection = buildSection(
+                "Globals · gloss map",
+                glossMapPosPanel,
+                glossMapFeatsPanel
+        );
+
+        conlluGlobalsExtractorSection = buildSection(
+                "Globals · extractors",
+                labeledLine("extractor name", extractorNameField),
+                extractorSeriesPanel,
+                extractorPersonsPanel,
+                labeledLine("extractor number suffix", extractorNumberSuffixField),
+                routingRulePanel
+        );
+
+        conlluGlobalsFilesSection = buildSection(
+                "Globals · external files",
+                extractorsFilePanel,
+                rulesFilePanel
+        );
+
+        panel.add(conlluRuleMetaSection);
+        panel.add(conlluMatchSection);
+        panel.add(conlluSetUposSection);
+        panel.add(conlluSetFeatsSection);
+        panel.add(conlluSetExtractSection);
+        panel.add(conlluGlobalsLexiconSection);
+        panel.add(conlluGlobalsDefinitionsSection);
+        panel.add(conlluGlobalsGlossMapSection);
+        panel.add(conlluGlobalsExtractorSection);
+        panel.add(conlluGlobalsFilesSection);
+
+        return panel;
+    }
+
+    private JPanel verticalCard(String title) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createTitledBorder(title));
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return panel;
+    }
+
+    private JPanel buildSection(String title, Component... components) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.setBorder(BorderFactory.createTitledBorder(title));
+        for (Component component : components) {
+            if (component instanceof JComponent jc) {
+                jc.setAlignmentX(Component.LEFT_ALIGNMENT);
+            }
+            panel.add(component);
+        }
         return panel;
     }
 
     private JPanel labeledLine(String label, Component component) {
         JPanel panel = new JPanel(new BorderLayout(8, 0));
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.setBorder(new EmptyBorder(2, 0, 2, 0));
         panel.add(new JLabel(label), BorderLayout.WEST);
         panel.add(component, BorderLayout.CENTER);
@@ -317,7 +469,41 @@ public final class RuleBuilderPanel extends JPanel {
     }
 
     private void refreshFieldVisibility() {
-        rootCardLayout.show(rootCards, getSelectedKind().name());
+        RuleKind kind = getSelectedKind();
+        rootCardLayout.show(rootCards, kind.name());
+
+        String action = String.valueOf(correctionActionBox.getSelectedItem());
+        boolean mergeAction = "merge_tokens".equals(action);
+
+        correctionMatchGlossSection.setVisible(!mergeAction);
+        correctionMatchTokensSection.setVisible(!mergeAction);
+        correctionSurfaceSection.setVisible(!mergeAction);
+        correctionBetweenTargetsSection.setVisible(!mergeAction);
+
+        correctionRewriteBeforeAfterSection.setVisible("rewrite_before_after".equals(action));
+        correctionRewriteGlossOnlySection.setVisible("rewrite_gloss_only".equals(action));
+        correctionRegexSection.setVisible("regex_sub".equals(action));
+        correctionSplitSuffixSection.setVisible("split_suffix".equals(action));
+        correctionSplitSuffixFinalGlossSection.setVisible("split_suffix_with_final_gloss".equals(action));
+        correctionDeleteSection.setVisible("delete_chars".equals(action) || "delete_part".equals(action));
+        correctionInsertSection.setVisible("insert_segment".equals(action));
+        correctionMergeSection.setVisible(mergeAction);
+
+        String conlluMode = String.valueOf(conlluModeBox.getSelectedItem());
+        boolean globalOnly = "global_config".equals(conlluMode);
+        boolean withGlobals = "global_config".equals(conlluMode) || "rule_full".equals(conlluMode);
+
+        conlluRuleMetaSection.setVisible(true);
+        conlluMatchSection.setVisible(!globalOnly);
+        conlluSetUposSection.setVisible("rule_upos".equals(conlluMode) || "rule_full".equals(conlluMode));
+        conlluSetFeatsSection.setVisible("rule_feats".equals(conlluMode) || "rule_full".equals(conlluMode));
+        conlluSetExtractSection.setVisible("rule_extract".equals(conlluMode) || "rule_full".equals(conlluMode));
+        conlluGlobalsLexiconSection.setVisible(withGlobals);
+        conlluGlobalsDefinitionsSection.setVisible(withGlobals);
+        conlluGlobalsGlossMapSection.setVisible(withGlobals);
+        conlluGlobalsExtractorSection.setVisible(withGlobals);
+        conlluGlobalsFilesSection.setVisible(withGlobals);
+
         revalidate();
         repaint();
     }
@@ -350,10 +536,11 @@ public final class RuleBuilderPanel extends JPanel {
     }
 
     private String generateCorrectionYaml() {
+        String action = String.valueOf(correctionActionBox.getSelectedItem());
+        validateCorrectionState(action);
+
         Map<String, Object> root = new LinkedHashMap<>();
         Map<String, Object> rule = baseRuleMap();
-
-        String action = String.valueOf(correctionActionBox.getSelectedItem());
         Map<String, Object> rewrite = new LinkedHashMap<>();
         Map<String, Object> merge = new LinkedHashMap<>();
 
@@ -361,6 +548,10 @@ public final class RuleBuilderPanel extends JPanel {
         if (!match.isEmpty()) {
             rewrite.put("match", match);
         }
+        if (useBetweenLengthBox.isSelected()) {
+            rewrite.put("between", Map.of("length", betweenLengthSpinner.getValue()));
+        }
+        putIfNotBlank(rule, "targets", targetsField.getText());
 
         switch (action) {
             case "rewrite_before_after" -> {
@@ -369,7 +560,9 @@ public final class RuleBuilderPanel extends JPanel {
                 Map<String, Object> gloss = new LinkedHashMap<>();
                 putCsvIfPresent(gloss, "before", glossBeforeField.getText());
                 putCsvIfPresent(gloss, "after", glossAfterField.getText());
-                if (!gloss.isEmpty()) rewrite.put("gloss", gloss);
+                if (!gloss.isEmpty()) {
+                    rewrite.put("gloss", gloss);
+                }
             }
             case "rewrite_gloss_only" -> {
                 Map<String, Object> gloss = new LinkedHashMap<>();
@@ -426,11 +619,59 @@ public final class RuleBuilderPanel extends JPanel {
             default -> throw new IllegalStateException("Unsupported correction action: " + action);
         }
 
-        if (!rewrite.isEmpty()) rule.put("rewrite", rewrite);
-        if (!merge.isEmpty()) rule.put("merge", merge);
+        if (!rewrite.isEmpty()) {
+            rule.put("rewrite", rewrite);
+        }
+        if (!merge.isEmpty()) {
+            rule.put("merge", merge);
+        }
 
         root.put("rules", List.of(rule));
         return yaml.dump(root);
+    }
+
+    private void validateCorrectionState(String action) {
+        boolean hasTokenSequences = !matchTokenSequencesPanel.getSequences().isEmpty();
+        boolean hasTokenSelectors = hasAnyTokenSelectors();
+        boolean hasSurfaceMatch = !nullToEmpty(surfaceSideField.getText()).isBlank()
+                || !nullToEmpty(surfaceRootInLexiconField.getText()).isBlank()
+                || surfaceRootStartsWithVowelBox.isSelected();
+        boolean hasBetweenOrTargets = useBetweenLengthBox.isSelected() || !nullToEmpty(targetsField.getText()).isBlank();
+        boolean hasGlossMatch = !matchGlossPanel.getValues().isEmpty()
+                || !matchGlossStartsWithPanel.getValues().isEmpty()
+                || !nullToEmpty(matchGlossInLexiconField.getText()).isBlank();
+
+        if (!"merge_tokens".equals(action) && hasTokenSequences && hasTokenSelectors) {
+            throw new IllegalArgumentException("Choose either token sequences or token selectors, not both.");
+        }
+
+        if ("merge_tokens".equals(action) && (hasTokenSequences || hasTokenSelectors || hasSurfaceMatch || hasBetweenOrTargets || hasGlossMatch)) {
+            throw new IllegalArgumentException("Merge rules only support merge.match.tokens in the guided builder.");
+        }
+
+        if ("rewrite_before_after".equals(action)) {
+            boolean hasSurfaceRewrite = !csv(surfaceBeforeField.getText()).isEmpty() || !csv(surfaceAfterField.getText()).isEmpty();
+            boolean hasGlossRewrite = !csv(glossBeforeField.getText()).isEmpty() || !csv(glossAfterField.getText()).isEmpty();
+
+            if (!hasSurfaceRewrite && !hasGlossRewrite) {
+                throw new IllegalArgumentException("Provide at least one surface or gloss rewrite.");
+            }
+            if (hasSurfaceRewrite && (csv(surfaceBeforeField.getText()).isEmpty() || csv(surfaceAfterField.getText()).isEmpty())) {
+                throw new IllegalArgumentException("Surface rewrite needs both 'before' and 'after'.");
+            }
+            if (hasGlossRewrite && (csv(glossBeforeField.getText()).isEmpty() || csv(glossAfterField.getText()).isEmpty())) {
+                throw new IllegalArgumentException("Gloss rewrite needs both 'before' and 'after'.");
+            }
+        }
+    }
+
+    private boolean hasAnyTokenSelectors() {
+        return !matchTokensIswordPanel.getValues().isEmpty()
+                || !matchTokensAnyPanel.getValues().isEmpty()
+                || !matchTokensStartsWithPanel.getValues().isEmpty()
+                || !matchTokensEndsWithPanel.getValues().isEmpty()
+                || !matchTokensHasSegmentPanel.getValues().isEmpty()
+                || matchStartsWithVowelBox.isSelected();
     }
 
     private Map<String, Object> buildCorrectionMatch() {
@@ -465,13 +706,9 @@ public final class RuleBuilderPanel extends JPanel {
         if (matchStartsWithVowelBox.isSelected()) {
             tokens.put("startswith_vowel", true);
         }
-        boolean hasTokenSequences = !matchTokenSequencesPanel.getSequences().isEmpty();
-        if (!tokens.isEmpty() && hasTokenSequences) {
-            throw new IllegalArgumentException("Use either token selector fields or token sequences, not both.");
-        }
         if (!tokens.isEmpty()) {
             match.put("tokens", tokens);
-        } else if (hasTokenSequences) {
+        } else if (!matchTokenSequencesPanel.getSequences().isEmpty()) {
             match.put("tokens", matchTokenSequencesPanel.getSequences());
         }
 
@@ -485,23 +722,17 @@ public final class RuleBuilderPanel extends JPanel {
             match.put("surface", surface);
         }
 
-        if (useBetweenLengthBox.isSelected()) {
-            match.put("between", Map.of("length", betweenLengthSpinner.getValue()));
-        }
-
-        putIfNotBlank(match, "targets", targetsField.getText());
         return match;
     }
 
     private String generateConlluYaml() {
-        Map<String, Object> root = new LinkedHashMap<>();
         String mode = String.valueOf(conlluModeBox.getSelectedItem());
+        validateConlluState(mode);
+
+        Map<String, Object> root = new LinkedHashMap<>();
 
         if ("global_config".equals(mode) || "rule_full".equals(mode)) {
             fillConlluGlobals(root);
-        }
-        if ("global_config".equals(mode) && root.isEmpty()) {
-            throw new IllegalArgumentException("Global config cannot be empty.");
         }
 
         if (!"global_config".equals(mode)) {
@@ -515,12 +746,14 @@ public final class RuleBuilderPanel extends JPanel {
             }
 
             Map<String, Object> match = buildConlluMatch();
-            if (!match.isEmpty()) rule.put("match", match);
+            if (!match.isEmpty()) {
+                rule.put("match", match);
+            }
 
             Map<String, Object> set = buildConlluSet(mode);
-            if (!set.isEmpty()) rule.put("set", set);
-
-            validateConlluRule(mode, set);
+            if (!set.isEmpty()) {
+                rule.put("set", set);
+            }
 
             root.put("rules", List.of(rule));
         }
@@ -528,13 +761,7 @@ public final class RuleBuilderPanel extends JPanel {
         return yaml.dump(root);
     }
 
-    private Map<String, Object> buildConlluMatch() {
-        Map<String, Object> match = new LinkedHashMap<>();
-        putIfNotBlank(match, "regex", conlluMatchRegexField.getText());
-        putListIfPresent(match, "in_list", conlluMatchInListPanel.getValues());
-        putListIfPresent(match, "require", conlluMatchRequirePanel.getValues());
-        putListIfPresent(match, "forbid", conlluMatchForbidPanel.getValues());
-
+    private void validateConlluState(String mode) {
         boolean hasLiteralGloss = !nullToEmpty(conlluMatchGlossLiteralField.getText()).isBlank();
         boolean hasStructuredGloss =
                 !nullToEmpty(conlluMatchGlossRegexField.getText()).isBlank()
@@ -545,10 +772,56 @@ public final class RuleBuilderPanel extends JPanel {
                         || !conlluMatchExtractPanel.getSpecs().isEmpty();
 
         if (hasLiteralGloss && hasStructuredGloss) {
-            throw new IllegalArgumentException("Choose either a literal gloss match or structured gloss criteria, not both.");
+            throw new IllegalArgumentException("Choose either a literal gloss match or a structured gloss match, not both.");
         }
 
-        if (hasLiteralGloss) {
+        if ("global_config".equals(mode) && !hasAnyConlluGlobals()) {
+            throw new IllegalArgumentException("Global config must define at least one global section.");
+        }
+
+        if ("rule_upos".equals(mode) && nullToEmpty(conlluSetUposField.getText()).isBlank()) {
+            throw new IllegalArgumentException("rule_upos requires set.upos.");
+        }
+
+        if ("rule_feats".equals(mode)
+                && conlluFeatsPanel.getMap().isEmpty()
+                && conlluFeatsTemplatePanel.getMap().isEmpty()) {
+            throw new IllegalArgumentException("rule_feats requires set.feats or set.feats_template.");
+        }
+
+        if ("rule_extract".equals(mode) && conlluSetExtractPanel.getSpecs().isEmpty()) {
+            throw new IllegalArgumentException("rule_extract requires at least one set.extract row.");
+        }
+
+        if ("rule_full".equals(mode)
+                && nullToEmpty(conlluSetUposField.getText()).isBlank()
+                && conlluFeatsPanel.getMap().isEmpty()
+                && conlluFeatsTemplatePanel.getMap().isEmpty()
+                && conlluSetExtractPanel.getSpecs().isEmpty()) {
+            throw new IllegalArgumentException("rule_full requires at least one set.upos, set.feats, set.feats_template or set.extract.");
+        }
+    }
+
+    private boolean hasAnyConlluGlobals() {
+        return !defPosPanel.getValues().isEmpty()
+                || !defFeatsPanel.getValues().isEmpty()
+                || !nullToEmpty(lexiconNameField.getText()).isBlank()
+                || !nullToEmpty(lexiconFileField.getText()).isBlank()
+                || !glossMapPosPanel.getMap().isEmpty()
+                || !glossMapFeatsPanel.getEntries().isEmpty()
+                || !nullToEmpty(extractorNameField.getText()).isBlank()
+                || !extractorsFilePanel.getValues().isEmpty()
+                || !rulesFilePanel.getValues().isEmpty();
+    }
+
+    private Map<String, Object> buildConlluMatch() {
+        Map<String, Object> match = new LinkedHashMap<>();
+        putIfNotBlank(match, "regex", conlluMatchRegexField.getText());
+        putListIfPresent(match, "in_list", conlluMatchInListPanel.getValues());
+        putListIfPresent(match, "require", conlluMatchRequirePanel.getValues());
+        putListIfPresent(match, "forbid", conlluMatchForbidPanel.getValues());
+
+        if (!nullToEmpty(conlluMatchGlossLiteralField.getText()).isBlank()) {
             match.put("gloss", conlluMatchGlossLiteralField.getText().trim());
         } else {
             Map<String, Object> gloss = new LinkedHashMap<>();
@@ -560,7 +833,9 @@ public final class RuleBuilderPanel extends JPanel {
             if (!conlluMatchExtractPanel.getSpecs().isEmpty()) {
                 gloss.put("extract", conlluMatchExtractPanel.getSpecs());
             }
-            if (!gloss.isEmpty()) match.put("gloss", gloss);
+            if (!gloss.isEmpty()) {
+                match.put("gloss", gloss);
+            }
         }
 
         return match;
@@ -595,7 +870,9 @@ public final class RuleBuilderPanel extends JPanel {
         Map<String, Object> def = new LinkedHashMap<>();
         putListIfPresent(def, "pos", defPosPanel.getValues());
         putListIfPresent(def, "feats", defFeatsPanel.getValues());
-        if (!def.isEmpty()) root.put("def", def);
+        if (!def.isEmpty()) {
+            root.put("def", def);
+        }
 
         if (!nullToEmpty(lexiconNameField.getText()).isBlank() && !nullToEmpty(lexiconFileField.getText()).isBlank()) {
             root.put("lexicons", Map.of(lexiconNameField.getText().trim(), lexiconFileField.getText().trim()));
@@ -634,9 +911,15 @@ public final class RuleBuilderPanel extends JPanel {
                 values.put("number", Map.of("suffix", extractorNumberSuffixField.getText().trim()));
             }
 
-            if (!series.isEmpty()) tagSchema.put("series", series);
-            if (!values.isEmpty()) tagSchema.put("values", values);
-            if (!tagSchema.isEmpty()) extractor.put("tag_schema", tagSchema);
+            if (!series.isEmpty()) {
+                tagSchema.put("series", series);
+            }
+            if (!values.isEmpty()) {
+                tagSchema.put("values", values);
+            }
+            if (!tagSchema.isEmpty()) {
+                extractor.put("tag_schema", tagSchema);
+            }
 
             if (!routingRulePanel.getRoutingRules().isEmpty()) {
                 extractor.put("routing", routingRulePanel.getRoutingRules());
@@ -750,33 +1033,5 @@ public final class RuleBuilderPanel extends JPanel {
             throw new IllegalArgumentException(message);
         }
         return values;
-    }
-
-    private void validateConlluRule(String mode, Map<String, Object> set) {
-        switch (mode) {
-            case "rule_upos" -> {
-                if (!set.containsKey("upos")) {
-                    throw new IllegalArgumentException("set.upos is required for rule_upos.");
-                }
-            }
-            case "rule_feats" -> {
-                if (!set.containsKey("feats") && !set.containsKey("feats_template")) {
-                    throw new IllegalArgumentException("At least one feat mapping is required for rule_feats.");
-                }
-            }
-            case "rule_extract" -> {
-                if (!set.containsKey("extract")) {
-                    throw new IllegalArgumentException("At least one extract mapping is required for rule_extract.");
-                }
-            }
-            case "rule_full" -> {
-                if (set.isEmpty()) {
-                    throw new IllegalArgumentException("rule_full must set at least one of upos, feats, feats_template, or extract.");
-                }
-            }
-            default -> {
-                // nothing
-            }
-        }
     }
 }
