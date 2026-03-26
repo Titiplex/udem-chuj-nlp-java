@@ -25,8 +25,9 @@ public class CorrectedEntryStalenessService {
     public int markApprovedEntriesStaleIfRulesChanged() {
         List<CorrectedEntry> changed = new ArrayList<>();
         for (CorrectedEntry entry : correctedEntryRepository.findAllByIsCorrectTrue()) {
-            if (rulesetFingerprintService.isCorrectionRulesetOutdated(entry) && !entry.isStale()) {
+            if (rulesetFingerprintService.isCorrectionRulesetOutdated(entry) && !entry.isStaleDueToRules()) {
                 entry.setStale(true);
+                entry.setStaleDueToRules(true);
                 changed.add(entry);
             }
         }

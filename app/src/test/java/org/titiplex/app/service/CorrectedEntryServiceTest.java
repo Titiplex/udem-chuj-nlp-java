@@ -67,24 +67,28 @@ class CorrectedEntryServiceTest {
     }
 
     @Test
-    void saveApprovedEntryCapturesCurrentRulesetFingerprint() {
+    void approvingEntryStoresRulesFingerprintAndClearsAllStaleFlags() {
         RawEntry rawEntry = new RawEntry();
-        rawEntry.setId(11L);
-        rawEntry.setUpdatedAt(Instant.parse("2026-03-26T12:00:00Z"));
+        rawEntry.setId(4L);
+        rawEntry.setUpdatedAt(Instant.parse("2026-03-26T10:00:00Z"));
 
-        CorrectedEntry incoming = new CorrectedEntry();
-        incoming.setId(99L);
-        incoming.setRawEntry(rawEntry);
-        incoming.setIsCorrect(true);
+        CorrectedEntry entry = new CorrectedEntry();
+        entry.setRawEntry(rawEntry);
+        entry.setIsCorrect(true);
+        entry.setStale(true);
+        entry.setStaleDueToRaw(true);
+        entry.setStaleDueToRules(true);
 
-        when(repository.findByRawEntryId(11L)).thenReturn(Optional.of(incoming));
-        when(rulesetFingerprintService.currentCorrectionRulesetFingerprint()).thenReturn("fingerprint-1");
-        when(repository.saveAndFlush(incoming)).thenReturn(incoming);
+        when(repository.findByRawEntryId(4L)).thenReturn(Optional.empty());
+        when(rulesetFingerprintService.currentCorrectionRulesetFingerprint()).thenReturn("fingerprint-v1");
+        when(repository.saveAndFlush(entry)).thenReturn(entry);
 
-        CorrectedEntry saved = assertDoesNotThrow(() -> service.save(incoming));
+        CorrectedEntry saved = service.save(entry);
 
-        assertEquals("fingerprint-1", saved.getApprovedRulesFingerprint());
         assertFalse(saved.isStale());
-        assertEquals(rawEntry.getUpdatedAt(), saved.getApprovedRawUpdatedAt());
+        assertFalse(saved.isStaleDueToRaw());
+        assertFalse(saved.isStaleDueToRules());
+        assertEquals("fingerprint-v1", saved.getApprovedRulesFingerprint());
+        assertEquals(Instant.parse("2026-03-26T10:00:00Z"), saved.getApprovedRawUpdatedAt());
     }
 }

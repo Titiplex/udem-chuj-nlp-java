@@ -10,18 +10,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ConlluEntrySelectionTableModelTest {
 
     @Test
-    void showsWorkflowStatusInsteadOfBareApprovedBoolean() {
+    void exposesWorkflowStatusAndStaleReason() {
         ConlluEntrySelectionTableModel model = new ConlluEntrySelectionTableModel();
 
-        CorrectedEntry approvedCurrent = new CorrectedEntry();
-        approvedCurrent.setId(1L);
-        approvedCurrent.setTranslationText("I win");
-        approvedCurrent.setIsCorrect(true);
-        approvedCurrent.setStale(false);
+        CorrectedEntry entry = new CorrectedEntry();
+        entry.setId(5L);
+        entry.setTranslationText("I win");
+        entry.setIsCorrect(true);
+        entry.setStale(true);
+        entry.setStaleDueToRules(true);
 
-        model.setEntries(List.of(approvedCurrent));
+        model.setEntries(List.of(entry));
 
-        assertEquals("Status", model.getColumnName(2));
-        assertEquals("Approved", model.getValueAt(0, 2));
+        assertEquals("Approved (stale)", model.getValueAt(0, 2));
+        assertEquals("Rules changed", model.getValueAt(0, 3));
     }
 }

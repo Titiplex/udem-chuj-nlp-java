@@ -3,7 +3,6 @@ package org.titiplex.app.ui.entry;
 import org.junit.jupiter.api.Test;
 import org.titiplex.app.persistence.entity.CorrectedEntry;
 
-import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,18 +10,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class EntryTableModelTest {
 
     @Test
-    void showsWorkflowStatusInStatusColumn() {
+    void exposesWorkflowStatusAndStaleReason() {
         EntryTableModel model = new EntryTableModel();
 
-        CorrectedEntry approvedStale = new CorrectedEntry();
-        approvedStale.setId(1L);
-        approvedStale.setIsCorrect(true);
-        approvedStale.setStale(true);
-        approvedStale.setUpdatedAt(Instant.parse("2026-03-25T12:00:00Z"));
+        CorrectedEntry entry = new CorrectedEntry();
+        entry.setId(12L);
+        entry.setIsCorrect(true);
+        entry.setStale(true);
+        entry.setStaleDueToRaw(true);
+        entry.setStaleDueToRules(true);
 
-        model.setEntries(List.of(approvedStale));
+        model.setEntries(List.of(entry));
 
-        assertEquals("Status", model.getColumnName(1));
         assertEquals("Approved (stale)", model.getValueAt(0, 1));
+        assertEquals("Raw + rules changed", model.getValueAt(0, 2));
     }
 }

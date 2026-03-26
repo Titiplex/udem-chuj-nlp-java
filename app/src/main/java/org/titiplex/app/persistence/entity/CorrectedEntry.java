@@ -22,6 +22,12 @@ public class CorrectedEntry extends Entry {
     @Column(name = "stale", nullable = false)
     private boolean stale = false;
 
+    @Column(name = "stale_due_to_raw", nullable = false)
+    private boolean staleDueToRaw = false;
+
+    @Column(name = "stale_due_to_rules", nullable = false)
+    private boolean staleDueToRules = false;
+
     @Column(name = "approved_raw_updated_at")
     private Instant approvedRawUpdatedAt;
 
@@ -33,5 +39,21 @@ public class CorrectedEntry extends Entry {
             return stale ? "Approved (stale)" : "Approved";
         }
         return "Draft";
+    }
+
+    public String stalenessReasonLabel() {
+        if (!stale) {
+            return "";
+        }
+        if (staleDueToRaw && staleDueToRules) {
+            return "Raw + rules changed";
+        }
+        if (staleDueToRaw) {
+            return "Raw changed";
+        }
+        if (staleDueToRules) {
+            return "Rules changed";
+        }
+        return "Needs review";
     }
 }

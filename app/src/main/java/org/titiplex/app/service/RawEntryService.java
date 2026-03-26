@@ -60,11 +60,13 @@ public class RawEntryService {
             return;
         }
 
-        if (!hasRawMovedSinceApproval(saved.getUpdatedAt(), linked.getApprovedRawUpdatedAt()) || linked.isStale()) {
+        if (!hasRawMovedSinceApproval(saved.getUpdatedAt(), linked.getApprovedRawUpdatedAt())
+                || linked.isStaleDueToRaw()) {
             return;
         }
 
         linked.setStale(true);
+        linked.setStaleDueToRaw(true);
         correctedEntryRepository.save(linked);
     }
 

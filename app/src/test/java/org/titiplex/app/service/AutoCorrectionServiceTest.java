@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.titiplex.app.persistence.entity.CorrectedEntry;
 import org.titiplex.app.persistence.entity.RawEntry;
 import org.titiplex.app.persistence.repository.CorrectedEntryRepository;
+import org.titiplex.app.persistence.repository.RawEntryRepository;
 import org.titiplex.rules.RuleEngine;
 
 import java.time.Instant;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,21 +29,30 @@ class AutoCorrectionServiceTest {
     private CorrectedEntryRepository correctedEntryRepository;
 
     @Mock
+    private RawEntryRepository rawEntryRepository;
+
+    @Mock
     private RulesetFingerprintService rulesetFingerprintService;
 
     private AutoCorrectionService service;
 
     @BeforeEach
     void setUp() {
-        service = new AutoCorrectionService(pipelineFactory, correctedEntryRepository, rulesetFingerprintService);
+        service = new AutoCorrectionService(
+                pipelineFactory,
+                correctedEntryRepository,
+                rawEntryRepository,
+                rulesetFingerprintService
+        );
     }
 
     @Test
-    void returnsExistingApprovedEntryWithoutReprocessing() {
+    void returnsExistingApprovedEntryWithoutReprocessingWhenStillCurrent() {
         RawEntry raw = rawEntry(1L, "ha tin", "A1 win", "I win");
-        raw.setUpdatedAt(Instant.parse("2026-03-26T12:00:00Z"));
+        raw.setUpdatedAt(Instant.parse("2026-03-26T10:00:00Z"));
         CorrectedEntry approved = correctedEntry(raw, true);
-        approved.setApprovedRawUpdatedAt(raw.getUpdatedAt());
+        approved.setApprovedRawUpdatedAt(Instant.parse("2026-03-26T10:00:00Z"));
+        approved.setApprovedRulesFingerprint("fp");
 
         when(correctedEntryRepository.findByRawEntryId(1L)).thenReturn(Optional.of(approved));
         when(rulesetFingerprintService.isCorrectionRulesetOutdated(approved)).thenReturn(false);
@@ -54,21 +65,23 @@ class AutoCorrectionServiceTest {
     }
 
     @Test
-    void marksApprovedEntryStaleWhenRulesChanged() {
+    void marksApprovedEntryStaleWhenRulesChange() {
         RawEntry raw = rawEntry(1L, "ha tin", "A1 win", "I win");
-        raw.setUpdatedAt(Instant.parse("2026-03-26T12:00:00Z"));
+        raw.setUpdatedAt(Instant.parse("2026-03-26T10:00:00Z"));
+
         CorrectedEntry approved = correctedEntry(raw, true);
-        approved.setApprovedRawUpdatedAt(raw.getUpdatedAt());
-        approved.setStale(false);
+        approved.setApprovedRawUpdatedAt(Instant.parse("2026-03-26T10:00:00Z"));
+        approved.setApprovedRulesFingerprint("old");
 
         when(correctedEntryRepository.findByRawEntryId(1L)).thenReturn(Optional.of(approved));
         when(rulesetFingerprintService.isCorrectionRulesetOutdated(approved)).thenReturn(true);
+        when(correctedEntryRepository.save(any(CorrectedEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CorrectedEntry result = service.applyToRawEntry(raw);
 
         assertThat(result).isSameAs(approved);
         assertThat(result.isStale()).isTrue();
-        verify(correctedEntryRepository).save(approved);
+        assertThat(result.isStaleDueToRules()).isTrue();
         verifyNoInteractions(pipelineFactory);
     }
 
@@ -86,7 +99,6 @@ class AutoCorrectionServiceTest {
         assertThat(saved.getGlossText()).isEqualTo("A1 win");
         assertThat(saved.getTranslationText()).isEqualTo("I win");
         assertThat(saved.getIsCorrect()).isFalse();
-        assertThat(saved.isStale()).isFalse();
         verify(correctedEntryRepository).save(any(CorrectedEntry.class));
     }
 
@@ -109,6 +121,33 @@ class AutoCorrectionServiceTest {
         assertThat(saved.getGlossText()).isEqualTo("A1 win");
         assertThat(saved.getTranslationText()).isEqualTo("I win");
         assertThat(saved.getDescription()).contains("Generated from raw entry #9");
+    }
+
+    @Test
+    void regenerateDraftFromRawClearsApprovalAndStaleReasonFlags() {
+        RawEntry raw = rawEntry(5L, "ha tin", "A1 win", "I win");
+        CorrectedEntry approved = correctedEntry(raw, true);
+        approved.setId(77L);
+        approved.setStale(true);
+        approved.setStaleDueToRaw(true);
+        approved.setStaleDueToRules(true);
+        approved.setApprovedRawUpdatedAt(Instant.parse("2026-03-26T10:00:00Z"));
+        approved.setApprovedRulesFingerprint("old-fp");
+
+        when(correctedEntryRepository.findById(77L)).thenReturn(Optional.of(approved));
+        when(rawEntryRepository.findById(5L)).thenReturn(Optional.of(raw));
+        when(pipelineFactory.createRuleEngine()).thenReturn(new RuleEngine(List.of()));
+        when(correctedEntryRepository.save(any(CorrectedEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CorrectedEntry saved = service.regenerateDraftFromRaw(77L);
+
+        assertThat(saved.getIsCorrect()).isFalse();
+        assertThat(saved.isStale()).isFalse();
+        assertThat(saved.isStaleDueToRaw()).isFalse();
+        assertThat(saved.isStaleDueToRules()).isFalse();
+        assertThat(saved.getApprovedRawUpdatedAt()).isNull();
+        assertThat(saved.getApprovedRulesFingerprint()).isNull();
+        assertThat(saved.getDescription()).contains("Regenerated draft");
     }
 
     @Test

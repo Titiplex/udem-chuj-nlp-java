@@ -68,6 +68,8 @@ public class CorrectedEntryService {
     private void syncApprovalState(CorrectedEntry entry) {
         if (Boolean.TRUE.equals(entry.getIsCorrect())) {
             entry.setStale(false);
+            entry.setStaleDueToRaw(false);
+            entry.setStaleDueToRules(false);
             RawEntry rawEntry = entry.getRawEntry();
             entry.setApprovedRawUpdatedAt(rawEntry == null ? null : rawEntry.getUpdatedAt());
             entry.setApprovedRulesFingerprint(rulesetFingerprintService.currentCorrectionRulesetFingerprint());
@@ -75,6 +77,8 @@ public class CorrectedEntryService {
         }
 
         entry.setStale(false);
+        entry.setStaleDueToRaw(false);
+        entry.setStaleDueToRules(false);
         entry.setApprovedRawUpdatedAt(null);
         entry.setApprovedRulesFingerprint(null);
     }

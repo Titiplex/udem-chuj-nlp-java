@@ -6,6 +6,7 @@ import org.titiplex.align.TokenAligner;
 import org.titiplex.app.persistence.entity.CorrectedEntry;
 import org.titiplex.app.persistence.entity.RawEntry;
 import org.titiplex.app.persistence.repository.CorrectedEntryRepository;
+import org.titiplex.app.persistence.repository.RawEntryRepository;
 import org.titiplex.model.CorrectedBlock;
 import org.titiplex.model.RawBlock;
 import org.titiplex.pipeline.CorrectionPipeline;
@@ -19,15 +20,18 @@ import java.util.List;
 public class AutoCorrectionService {
     private final DesktopPipelineFactory pipelineFactory;
     private final CorrectedEntryRepository correctedEntryRepository;
+    private final RawEntryRepository rawEntryRepository;
     private final RulesetFingerprintService rulesetFingerprintService;
 
     public AutoCorrectionService(
             DesktopPipelineFactory pipelineFactory,
             CorrectedEntryRepository correctedEntryRepository,
+            RawEntryRepository rawEntryRepository,
             RulesetFingerprintService rulesetFingerprintService
     ) {
         this.pipelineFactory = pipelineFactory;
         this.correctedEntryRepository = correctedEntryRepository;
+        this.rawEntryRepository = rawEntryRepository;
         this.rulesetFingerprintService = rulesetFingerprintService;
     }
 
@@ -37,16 +41,40 @@ public class AutoCorrectionService {
                 : correctedEntryRepository.findByRawEntryId(rawEntry.getId()).orElse(null);
 
         if (existing != null && Boolean.TRUE.equals(existing.getIsCorrect())) {
-            boolean staleNow = hasRawMovedSinceApproval(rawEntry.getUpdatedAt(), existing.getApprovedRawUpdatedAt())
-                    || rulesetFingerprintService.isCorrectionRulesetOutdated(existing);
-
-            if (staleNow && !existing.isStale()) {
-                existing.setStale(true);
+            if (markApprovedEntryStaleIfNeeded(existing, rawEntry)) {
                 correctedEntryRepository.save(existing);
             }
             return existing;
         }
 
+        return recomputeIntoTarget(existing, rawEntry, false);
+    }
+
+    public CorrectedEntry regenerateDraftFromRaw(Long correctedEntryId) {
+        CorrectedEntry existing = correctedEntryRepository.findById(correctedEntryId)
+                .orElseThrow(() -> new IllegalArgumentException("Corrected entry #" + correctedEntryId + " does not exist"));
+
+        Long rawEntryId = existing.getRawEntry() == null ? null : existing.getRawEntry().getId();
+        if (rawEntryId == null) {
+            throw new IllegalStateException("Corrected entry #" + correctedEntryId + " is not linked to a raw entry");
+        }
+
+        RawEntry rawEntry = rawEntryRepository.findById(rawEntryId)
+                .orElseThrow(() -> new IllegalStateException("Linked raw entry #" + rawEntryId + " does not exist"));
+
+        return recomputeIntoTarget(existing, rawEntry, true);
+    }
+
+    public int applyToAll(List<RawEntry> rawEntries) {
+        int count = 0;
+        for (RawEntry rawEntry : rawEntries) {
+            applyToRawEntry(rawEntry);
+            count++;
+        }
+        return count;
+    }
+
+    private CorrectedEntry recomputeIntoTarget(CorrectedEntry existing, RawEntry rawEntry, boolean regenerateDraft) {
         RuleEngine engine = pipelineFactory.createRuleEngine();
         CorrectionPipeline pipeline = new CorrectionPipeline(new TokenAligner(), engine);
 
@@ -67,23 +95,38 @@ public class AutoCorrectionService {
         target.setRawText(corrected.chujText());
         target.setGlossText(corrected.glossText());
         target.setTranslationText(corrected.translation());
-        target.setDescription("Generated from raw entry #" + rawEntry.getId());
-        target.setStale(false);
+        target.setDescription((regenerateDraft ? "Regenerated draft" : "Generated") + " from raw entry #" + rawEntry.getId());
 
-        if (target.getIsCorrect() == null) {
-            target.setIsCorrect(false);
-        }
+        target.setIsCorrect(false);
+        target.setStale(false);
+        target.setStaleDueToRaw(false);
+        target.setStaleDueToRules(false);
+        target.setApprovedRawUpdatedAt(null);
+        target.setApprovedRulesFingerprint(null);
 
         return correctedEntryRepository.save(target);
     }
 
-    public int applyToAll(List<RawEntry> rawEntries) {
-        int count = 0;
-        for (RawEntry rawEntry : rawEntries) {
-            applyToRawEntry(rawEntry);
-            count++;
+    private boolean markApprovedEntryStaleIfNeeded(CorrectedEntry existing, RawEntry rawEntry) {
+        boolean changed = false;
+
+        if (hasRawMovedSinceApproval(rawEntry.getUpdatedAt(), existing.getApprovedRawUpdatedAt())
+                && !existing.isStaleDueToRaw()) {
+            existing.setStaleDueToRaw(true);
+            changed = true;
         }
-        return count;
+
+        if (rulesetFingerprintService.isCorrectionRulesetOutdated(existing) && !existing.isStaleDueToRules()) {
+            existing.setStaleDueToRules(true);
+            changed = true;
+        }
+
+        if ((existing.isStaleDueToRaw() || existing.isStaleDueToRules()) && !existing.isStale()) {
+            existing.setStale(true);
+            changed = true;
+        }
+
+        return changed;
     }
 
     private static boolean hasRawMovedSinceApproval(Instant rawUpdatedAt, Instant approvedRawUpdatedAt) {

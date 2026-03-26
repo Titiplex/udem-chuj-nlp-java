@@ -16,6 +16,8 @@ public class SwingConfig {
     private final DesktopExportService exportService;
     private final ConlluPreviewService conlluPreviewService;
     private final AnnotationConfigStateService annotationConfigStateService;
+    private final AppRefreshCoordinator appRefreshCoordinator;
+    private final CorrectedEntryStalenessService correctedEntryStalenessService;
 
     public SwingConfig(
             RuleService ruleService,
@@ -25,7 +27,9 @@ public class SwingConfig {
             AutoCorrectionService autoCorrectionService,
             DesktopExportService exportService,
             ConlluPreviewService conlluPreviewService,
-            AnnotationConfigStateService annotationConfigStateService
+            AnnotationConfigStateService annotationConfigStateService,
+            AppRefreshCoordinator appRefreshCoordinator,
+            CorrectedEntryStalenessService correctedEntryStalenessService
     ) {
         this.ruleService = ruleService;
         this.correctedEntryService = correctedEntryService;
@@ -35,6 +39,8 @@ public class SwingConfig {
         this.exportService = exportService;
         this.conlluPreviewService = conlluPreviewService;
         this.annotationConfigStateService = annotationConfigStateService;
+        this.appRefreshCoordinator = appRefreshCoordinator;
+        this.correctedEntryStalenessService = correctedEntryStalenessService;
 
     }
     @Bean
@@ -47,7 +53,9 @@ public class SwingConfig {
                 autoCorrectionService,
                 exportService,
                 annotationConfigStateService,
-                conlluPreviewService
+                conlluPreviewService,
+                appRefreshCoordinator,
+                correctedEntryStalenessService
                 );
     }
 }

@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ConlluEntrySelectionTableModel extends AbstractTableModel {
-    private final String[] columns = {"Id", "Translation", "Status"};
+    private final String[] columns = {"Id", "Translation", "Status", "Reason"};
     private final List<CorrectedEntry> entries = new ArrayList<>();
 
     public void setEntries(List<CorrectedEntry> newEntries) {
@@ -46,6 +46,7 @@ public class ConlluEntrySelectionTableModel extends AbstractTableModel {
             case 0 -> entry.getId();
             case 1 -> shorten(entry.getTranslationText());
             case 2 -> entry.workflowStatusLabel();
+            case 3 -> entry.stalenessReasonLabel();
             default -> "";
         };
     }

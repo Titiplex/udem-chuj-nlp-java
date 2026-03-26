@@ -13,6 +13,7 @@ public class EntryEditorPanel extends JPanel {
     private final JTextField idField = new JTextField();
     private final JComboBox<RawEntryRef> rawEntryComboBox = new JComboBox<>();
     private final JTextField statusField = new JTextField();
+    private final JTextField staleReasonField = new JTextField();
     private final JTextField approvedRawUpdatedAtField = new JTextField();
     private final JTextField createdField = new JTextField();
     private final JTextField updatedField = new JTextField();
@@ -38,6 +39,7 @@ public class EntryEditorPanel extends JPanel {
 
         idField.setEditable(false);
         statusField.setEditable(false);
+        staleReasonField.setEditable(false);
         approvedRawUpdatedAtField.setEditable(false);
         createdField.setEditable(false);
         updatedField.setEditable(false);
@@ -68,7 +70,7 @@ public class EntryEditorPanel extends JPanel {
     }
 
     private JComponent buildMetaPanel() {
-        JPanel meta = new JPanel(new GridLayout(8, 2, 8, 8));
+        JPanel meta = new JPanel(new GridLayout(9, 2, 8, 8));
         meta.setBorder(BorderFactory.createTitledBorder("Metadata"));
 
         meta.add(new JLabel("ID"));
@@ -79,6 +81,9 @@ public class EntryEditorPanel extends JPanel {
 
         meta.add(new JLabel("Status"));
         meta.add(statusField);
+
+        meta.add(new JLabel("Stale reason"));
+        meta.add(staleReasonField);
 
         meta.add(new JLabel("Approved against raw updated at"));
         meta.add(approvedRawUpdatedAtField);
@@ -147,6 +152,7 @@ public class EntryEditorPanel extends JPanel {
             idField.setText("");
             rawEntryComboBox.setSelectedIndex(-1);
             statusField.setText("");
+            staleReasonField.setText("");
             approvedRawUpdatedAtField.setText("");
             createdField.setText("");
             updatedField.setText("");
@@ -163,6 +169,7 @@ public class EntryEditorPanel extends JPanel {
 
         idField.setText(entry.getId() == null ? "" : String.valueOf(entry.getId()));
         statusField.setText(entry.workflowStatusLabel());
+        staleReasonField.setText(entry.stalenessReasonLabel());
         approvedRawUpdatedAtField.setText(formatInstant(entry.getApprovedRawUpdatedAt()));
         createdField.setText(formatInstant(entry.getCreatedAt()));
         updatedField.setText(formatInstant(entry.getUpdatedAt()));
@@ -172,7 +179,8 @@ public class EntryEditorPanel extends JPanel {
         approvedBox.setSelected(Boolean.TRUE.equals(entry.getIsCorrect()));
         descriptionArea.setText(nullSafe(entry.getDescription()));
         staleWarningLabel.setText(entry.isStale()
-                ? "Warning: this approved correction is outdated because the linked raw entry changed after approval."
+                ? "Warning: this correction is outdated (" + entry.stalenessReasonLabel()
+                + "). Use 'Recompute draft' to refresh it from the linked raw entry and current rules."
                 : " ");
 
         Long linkedRawId = entry.getRawEntry() == null ? null : entry.getRawEntry().getId();

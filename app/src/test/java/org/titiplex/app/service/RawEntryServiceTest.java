@@ -41,26 +41,23 @@ class RawEntryServiceTest {
     }
 
     @Test
-    void saveMarksLinkedApprovedCorrectionAsStaleWhenRawMovedAfterApproval() {
-        Instant approvedAt = Instant.parse("2026-03-25T12:00:00Z");
-        Instant rawUpdatedAt = Instant.parse("2026-03-26T12:00:00Z");
-
+    void saveMarksLinkedApprovedCorrectionAsStaleDueToRaw() {
         RawEntry rawEntry = new RawEntry();
         rawEntry.setId(7L);
-        rawEntry.setUpdatedAt(rawUpdatedAt);
+        rawEntry.setUpdatedAt(Instant.parse("2026-03-26T12:00:00Z"));
 
         CorrectedEntry correctedEntry = new CorrectedEntry();
         correctedEntry.setId(42L);
         correctedEntry.setIsCorrect(true);
-        correctedEntry.setApprovedRawUpdatedAt(approvedAt);
-        correctedEntry.setStale(false);
+        correctedEntry.setApprovedRawUpdatedAt(Instant.parse("2026-03-26T10:00:00Z"));
 
         when(rawEntryRepository.saveAndFlush(rawEntry)).thenReturn(rawEntry);
         when(correctedEntryRepository.findByRawEntryId(7L)).thenReturn(Optional.of(correctedEntry));
-        when(correctedEntryRepository.save(correctedEntry)).thenReturn(correctedEntry);
 
         rawEntryService.save(rawEntry);
 
-        verify(correctedEntryRepository).save(correctedEntry);
+        verify(correctedEntryRepository).save(argThat(saved ->
+                saved.isStale() && saved.isStaleDueToRaw()
+        ));
     }
 }
