@@ -66,7 +66,7 @@ class RuleBuilderPanelTest {
         assertEquals("i", rule.get("targets"));
         assertEquals(2, between.get("length"));
 
-        Map<String, Object> match = (Map<String, Object>) rewrite.get("match");
+        Map<String, Object> match = (Map<String, Object>) rewrite.getOrDefault("match", Map.of());
         assertFalse(match.containsKey("between"));
         assertFalse(match.containsKey("targets"));
     }
@@ -82,19 +82,14 @@ class RuleBuilderPanelTest {
 
         getField(panel, "matchGlossPanel", StringListTablePanel.class).setValues(List.of("FUT"));
         getField(panel, "matchTokensIswordPanel", StringListTablePanel.class).setValues(List.of("ha"));
-        getField(panel, "matchTokenSequencesPanel", org.titiplex.app.ui.rule.builder.support.TokenSequenceTablePanel.class)
-                .getClass(); // ensure field exists
 
         Field seqField = panel.getClass().getDeclaredField("matchTokenSequencesPanel");
         seqField.setAccessible(true);
         Object seqPanel = seqField.get(panel);
-        var setSeq = seqPanel.getClass().getDeclaredMethod("getSequences");
-        setSeq.setAccessible(true);
-        // cannot set directly, so use reflection on model via helper below
         setFirstSequence(seqPanel, "ha,tik");
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, panel::generateYaml);
-        assertTrue(ex.getMessage().contains("either token sequences or token selectors"));
+        assertEquals("Use either token selector fields or token sequences, not both.", ex.getMessage());
     }
 
     @Test

@@ -642,7 +642,7 @@ public final class RuleBuilderPanel extends JPanel {
                 || !nullToEmpty(matchGlossInLexiconField.getText()).isBlank();
 
         if (!"merge_tokens".equals(action) && hasTokenSequences && hasTokenSelectors) {
-            throw new IllegalArgumentException("Choose either token sequences or token selectors, not both.");
+            throw new IllegalArgumentException("Use either token selector fields or token sequences, not both.");
         }
 
         if ("merge_tokens".equals(action) && (hasTokenSequences || hasTokenSelectors || hasSurfaceMatch || hasBetweenOrTargets || hasGlossMatch)) {
@@ -772,15 +772,15 @@ public final class RuleBuilderPanel extends JPanel {
                         || !conlluMatchExtractPanel.getSpecs().isEmpty();
 
         if (hasLiteralGloss && hasStructuredGloss) {
-            throw new IllegalArgumentException("Choose either a literal gloss match or a structured gloss match, not both.");
+            throw new IllegalArgumentException("Choose either a literal gloss match or structured gloss criteria, not both.");
         }
 
         if ("global_config".equals(mode) && !hasAnyConlluGlobals()) {
-            throw new IllegalArgumentException("Global config must define at least one global section.");
+            throw new IllegalArgumentException("Global config cannot be empty.");
         }
 
         if ("rule_upos".equals(mode) && nullToEmpty(conlluSetUposField.getText()).isBlank()) {
-            throw new IllegalArgumentException("rule_upos requires set.upos.");
+            throw new IllegalArgumentException("set.upos is required for rule_upos.");
         }
 
         if ("rule_feats".equals(mode)

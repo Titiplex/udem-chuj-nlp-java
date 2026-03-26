@@ -144,7 +144,7 @@ class RuleServiceTest {
                       after: heb'
                 """);
 
-        when(ruleRepository.findByStableId("corr.normalize")).thenReturn(Optional.empty());
+//        when(ruleRepository.findByStableId("corr.normalize")).thenReturn(Optional.empty());
         when(validationService.validateRule(any(Rule.class))).thenReturn(errorRun("invalid imported"));
 
         assertThatThrownBy(() -> service.importYaml(yaml, RuleKind.CORRECTION))

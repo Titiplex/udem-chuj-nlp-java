@@ -55,6 +55,7 @@ public class MainFrame extends JFrame {
         this.entryPanel = new EntryPanel(
                 correctedEntryService,
                 rawEntryService,
+                autoCorrectionService,
                 refreshCoordinator,
                 this::setStatus
         );

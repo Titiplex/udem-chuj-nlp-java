@@ -3,6 +3,7 @@ package org.titiplex.app.service;
 import org.springframework.stereotype.Service;
 
 import javax.swing.*;
+import java.lang.reflect.InvocationTargetException;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -51,8 +52,19 @@ public class AppRefreshCoordinator {
     private void runOnEdt(Runnable runnable) {
         if (SwingUtilities.isEventDispatchThread()) {
             runnable.run();
-        } else {
-            SwingUtilities.invokeLater(runnable);
+            return;
+        }
+        try {
+            SwingUtilities.invokeAndWait(runnable);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while refreshing UI.", e);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new IllegalStateException("UI refresh listener failed.", cause);
         }
     }
 }
